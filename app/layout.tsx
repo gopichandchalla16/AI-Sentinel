@@ -2,13 +2,18 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'AI-Sentinel | Solana Transaction Guard',
-  description: 'Real-time AI-powered security guard for Solana transactions. Detect phishing, exploits, and malicious contracts before you sign — powered by Google Gemini AI.',
-  keywords: ['Solana', 'security', 'AI', 'transaction', 'blockchain', 'DeFi', 'phishing', 'Gemini'],
+  title: 'AI-Sentinel | Real-time Solana Transaction Guard',
+  description: 'AI-powered real-time security analysis for Solana transactions. Detect phishing, wallet drainers, and exploits before you sign — powered by Helius RPC and Google Gemini AI.',
+  keywords: ['Solana', 'security', 'blockchain', 'AI', 'transaction', 'phishing', 'DeFi', 'Phantom', 'Helius', 'Colosseum'],
   openGraph: {
-    title: 'AI-Sentinel | Solana Transaction Guard',
-    description: 'Scan any Solana transaction for risks in real-time using AI.',
+    title: 'AI-Sentinel | Real-time Solana Transaction Guard',
+    description: 'Know what you are signing before you sign it. AI-powered Solana security.',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'AI-Sentinel | Solana Transaction Guard',
+    description: 'AI-powered real-time security analysis for Solana transactions.',
   },
 }
 

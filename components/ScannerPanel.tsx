@@ -1,25 +1,31 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 interface Props {
   onAnalyze: (sig: string) => void
   loading: boolean
+  walletAddress?: string | null
 }
 
 const SAMPLE_SIGS = [
   {
-    label: 'Recent Jupiter swap',
-    sig: '4uSekhFJBpBhvbVquvnpSBkaKRFcBhvQSTJSSMaKqNhSdB93z8vJR6W1rAXnhXAFEvqcERAC2N5dEeTBUqumkBBe',
+    label: 'SOL Transfer (LOW risk expected)',
+    sig: '3nVfRMKR5vbFpPmJbopTfQzFRbDa7ELmhS6veAP5BFp6YqDHCLqZUBzmzPWCZ5fwjC6oBfQNWiHuTvJZZX3FBQS',
+    risk: 'LOW',
   },
   {
-    label: 'SOL transfer example',
-    sig: '3F8E9kVeH6jXC2zLKwL1d7qJjXw8LpJkSDxmRQ6aN5gJpEbDv8GdCzRkE4HHxaT5oN3WpqVnUCkJWKzGhxSMBFT',
+    label: 'DeFi interaction (review carefully)',
+    sig: '4uSekhFJBpBhvbVquvnpSBkaKRFcBhvQSTJSSMaKqNhSdB93z8vJR6W1rAXnhXAFEvqcERAC2N5dEeTBUqumkBBe',
+    risk: 'MEDIUM',
   },
 ]
 
-export default function ScannerPanel({ onAnalyze, loading }: Props) {
+export default function ScannerPanel({ onAnalyze, loading, walletAddress }: Props) {
   const [sig, setSig] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [charCount, setCharCount] = useState(0)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => { setCharCount(sig.length) }, [sig])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,71 +38,75 @@ export default function ScannerPanel({ onAnalyze, loading }: Props) {
   }
 
   const isValid = sig.trim().length >= 40
+  const charColor = charCount === 0 ? '#333' : charCount >= 80 ? '#14F195' : charCount >= 40 ? '#FFC107' : '#FF6B35'
 
   return (
     <div className="relative mt-2">
-      {/* Animated gradient border wrapper */}
       <div className="gradient-border">
-        <div className="gradient-border-inner p-6">
+        <div className="gradient-border-inner p-5">
           {/* Terminal header */}
-          <div className="flex items-center gap-1.5 mb-5">
+          <div className="flex items-center gap-1.5 mb-4">
             <div className="w-3 h-3 rounded-full bg-red-500/60" />
             <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
             <div className="w-3 h-3 rounded-full bg-green-500/60" />
-            <span className="ml-3 text-xs text-[#444] mono">sentinel://scan — mainnet</span>
+            <span className="ml-3 text-xs text-[#333] mono">sentinel://scan — mainnet</span>
             <div className="ml-auto flex items-center gap-1.5">
+              {walletAddress && (
+                <span className="text-[10px] mono px-2 py-0.5 rounded" style={{ background: 'rgba(153,69,255,0.1)', color: '#9945FF', border: '1px solid rgba(153,69,255,0.2)' }}>
+                  {walletAddress.slice(0,4)}...{walletAddress.slice(-4)}
+                </span>
+              )}
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
               <span className="text-[10px] text-green-500 mono">ONLINE</span>
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-xs mono text-[#666] mb-2 uppercase tracking-widest">
-                Transaction Signature
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs mono text-[#555] uppercase tracking-widest">
+                  Transaction Signature
+                </label>
+                <span className="text-[11px] mono transition-colors" style={{ color: charColor }}>
+                  {charCount} / 88
+                </span>
+              </div>
               <div className="relative">
-                <input
+                <textarea
                   ref={inputRef}
-                  type="text"
                   value={sig}
-                  onChange={e => setSig(e.target.value)}
-                  placeholder="Paste 87-88 character Solana tx signature..."
-                  className="w-full px-4 py-3.5 rounded-xl text-white mono text-sm placeholder-[#333] focus:outline-none transition-all pr-16"
+                  onChange={e => setSig(e.target.value.replace(/\s/g, ''))}
+                  placeholder="Paste 87-88 character Solana transaction signature..."
+                  rows={2}
+                  className="w-full px-4 py-3 rounded-xl text-white mono text-sm placeholder-[#2a2a2a] focus:outline-none transition-all resize-none"
                   style={{
-                    background: '#0d0d0d',
-                    border: `1px solid ${isValid ? 'rgba(153,69,255,0.4)' : '#222'}`,
-                    boxShadow: isValid ? '0 0 0 3px rgba(153,69,255,0.08)' : 'none',
+                    background: '#0a0a0a',
+                    border: `1px solid ${isValid ? 'rgba(153,69,255,0.45)' : '#1e1e1e'}`,
+                    boxShadow: isValid ? '0 0 0 3px rgba(153,69,255,0.07)' : 'none',
+                    lineHeight: '1.6',
                   }}
                   disabled={loading}
                   spellCheck={false}
                   autoComplete="off"
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  {sig.length > 0 && (
-                    <>
-                      <span className={`text-[11px] mono ${sig.length >= 80 ? 'text-green-400' : 'text-[#444]'}`}>
-                        {sig.length}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setSig('')}
-                        className="text-[#444] hover:text-[#888] transition-colors text-xs"
-                        aria-label="Clear input"
-                      >
-                        ✕
-                      </button>
-                    </>
-                  )}
-                </div>
+                {sig.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSig('')}
+                    className="absolute top-2 right-2 text-[#333] hover:text-[#888] transition-colors text-xs w-5 h-5 flex items-center justify-center"
+                    aria-label="Clear input"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
 
             <button type="submit" className="btn-primary" disabled={loading || !isValid}>
               {loading ? (
                 <>
-                  <span className="w-4 h-4 border-2 border-white/25 border-t-white rounded-full animate-spin" />
-                  Scanning on-chain data...
+                  <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  Scanning Solana mainnet...
                 </>
               ) : (
                 <>
@@ -107,20 +117,25 @@ export default function ScannerPanel({ onAnalyze, loading }: Props) {
             </button>
           </form>
 
-          {/* Sample signatures */}
-          <div className="mt-5 pt-4 border-t" style={{ borderColor: '#1a1a1a' }}>
-            <p className="text-[11px] mono text-[#444] mb-2 uppercase tracking-wider">Load a sample signature:</p>
-            <div className="flex flex-col gap-1.5">
-              {SAMPLE_SIGS.map(({ label, sig: s }) => (
+          {/* Samples */}
+          <div className="mt-4 pt-4 border-t" style={{ borderColor: '#181818' }}>
+            <p className="text-[11px] mono text-[#333] mb-2.5 uppercase tracking-wider">Try a sample signature:</p>
+            <div className="flex flex-col gap-2">
+              {SAMPLE_SIGS.map(({ label, sig: s, risk }) => (
                 <button
                   key={s}
                   onClick={() => handlePaste(s)}
                   disabled={loading}
-                  className="text-left text-[11px] mono text-[#555] hover:text-purple-400 transition-colors flex items-center gap-2 group"
+                  className="text-left text-[11px] mono flex items-center gap-2.5 group px-3 py-2 rounded-lg transition-colors"
+                  style={{ border: '1px solid #181818', background: '#0a0a0a' }}
                 >
-                  <span className="text-[#333] group-hover:text-purple-500">→</span>
-                  <span className="text-[#666] group-hover:text-[#888] mr-1">{label}:</span>
-                  <span className="truncate">{s.slice(0, 32)}...</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded font-bold" style={{
+                    color: risk === 'LOW' ? '#14F195' : '#FFC107',
+                    background: risk === 'LOW' ? 'rgba(20,241,149,0.1)' : 'rgba(255,193,7,0.1)',
+                    border: `1px solid ${risk === 'LOW' ? 'rgba(20,241,149,0.2)' : 'rgba(255,193,7,0.2)'}`
+                  }}>{risk}</span>
+                  <span className="text-[#555] group-hover:text-[#888] transition-colors flex-1">{label}</span>
+                  <span className="text-[#333] group-hover:text-purple-500 transition-colors">→</span>
                 </button>
               ))}
             </div>
@@ -128,11 +143,11 @@ export default function ScannerPanel({ onAnalyze, loading }: Props) {
         </div>
       </div>
 
-      <p className="text-center text-[11px] mono text-[#444] mt-3">
-        Get signatures from{' '}
-        <a href="https://solscan.io" target="_blank" rel="noopener noreferrer" className="text-purple-500/70 hover:text-purple-400 transition-colors">solscan.io</a>
-        {' '}or{' '}
-        <a href="https://explorer.solana.com" target="_blank" rel="noopener noreferrer" className="text-purple-500/70 hover:text-purple-400 transition-colors">explorer.solana.com</a>
+      <p className="text-center text-[11px] mono text-[#333] mt-2.5">
+        Get real signatures from{' '}
+        <a href="https://solscan.io" target="_blank" rel="noopener noreferrer" className="text-purple-500/60 hover:text-purple-400 transition-colors">solscan.io</a>
+        {' '}·{' '}
+        <a href="https://explorer.solana.com" target="_blank" rel="noopener noreferrer" className="text-purple-500/60 hover:text-purple-400 transition-colors">explorer.solana.com</a>
       </p>
     </div>
   )

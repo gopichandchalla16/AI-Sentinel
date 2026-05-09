@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const SOLANA_RPC = 'https://api.mainnet-beta.solana.com'
+// Prefer Helius RPC (sponsor) — falls back to public RPC if env not set
+const SOLANA_RPC = process.env.HELIUS_RPC_URL ?? 'https://api.mainnet-beta.solana.com'
 
 const rpcPost = async (method: string, params: unknown[]) => {
   const res = await fetch(SOLANA_RPC, {
@@ -81,7 +82,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Fetch transaction from Solana
     const txData = await getTransaction(signature)
 
     if (!txData?.result) {
@@ -98,14 +98,13 @@ export async function POST(req: NextRequest) {
       for (const k of keys) accounts.push(typeof k === 'string' ? k : k.pubkey)
     } catch { /* empty */ }
 
-    // Fetch destination wallet info in parallel
     const dest = accounts[1] ?? accounts[0] ?? null
     const [destBalance, destHistory] = dest
       ? await Promise.all([getBalance(dest), getSignatureCount(dest)])
       : [0, 0]
 
-    // Build a focused context for Gemini
     const context = {
+      rpc_provider: 'Helius (Colosseum sponsor)',
       fee_lamports: tx.meta?.fee,
       transaction_error: tx.meta?.err,
       block_time_unix: tx.blockTime,
@@ -131,7 +130,7 @@ export async function POST(req: NextRequest) {
 Respond in EXACTLY this format — no extra sections:
 RISK: [LOW / MEDIUM / HIGH / CRITICAL]
 FLAGS:
-- [red flag 1, or "No significant red flags" if LOW]
+- [red flag 1, or "No significant red flags detected" if LOW]
 - [red flag 2 if present]
 SUMMARY: [one clear sentence — what this transaction does and to whom]
 RECOMMENDATION: [one of: "Proceed safely." / "Proceed with caution — [reason]." / "DO NOT SIGN — [specific reason]."]
@@ -139,16 +138,16 @@ RECOMMENDATION: [one of: "Proceed safely." / "Proceed with caution — [reason].
 Transaction Analysis Context:
 ${JSON.stringify(context, null, 2)}
 
-Security checklist — consider each:
-1. Is the destination wallet new (< 3 txs) or empty? → HIGH risk indicator
+Security checklist — check ALL 7:
+1. Destination wallet new (< 3 txs) or empty? → HIGH risk indicator
 2. Large SOL outflows to unknown wallets? → HIGH/CRITICAL
-3. Transaction failed (err field non-null)? → note it
+3. Transaction failed (err field non-null)? → note it explicitly
 4. Abnormally high fees (> 100,000 lamports)? → suspicious
-5. Suspicious program logs mentioning known exploit patterns?
-6. Token draining patterns (many SPL token transfers)?
+5. Suspicious program logs mentioning drain, sweep, approve, setAuthority?
+6. Token draining patterns (many SPL token transfers out)?
 7. Inner instruction complexity (> 5 could be obfuscation)?
 
-Be direct. Be specific. Do not hedge excessively.`
+Be direct and specific. Do not hedge.`
 
     const geminiText = await callGemini(prompt)
     const parsed = parseResponse(geminiText)
