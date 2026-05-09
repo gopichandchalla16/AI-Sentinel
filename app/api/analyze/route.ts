@@ -1,172 +1,170 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server';
 
-// Prefer Helius RPC (sponsor) — falls back to public RPC if env not set
-const SOLANA_RPC = process.env.HELIUS_RPC_URL ?? 'https://api.mainnet-beta.solana.com'
+// ─── Helius RPC endpoint (set HELIUS_RPC in Vercel env vars) ──────────────────
+const HELIUS_RPC = process.env.HELIUS_RPC || 'https://api.mainnet-beta.solana.com';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
-const rpcPost = async (method: string, params: unknown[]) => {
-  const res = await fetch(SOLANA_RPC, {
+// ─── Known program labels ─────────────────────────────────────────────────────
+const PROGRAM_LABELS: Record<string, string> = {
+  '11111111111111111111111111111111': 'System Program',
+  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf8Ss623VQ5DA': 'SPL Token',
+  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJe1qSe': 'Associated Token Program',
+  'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4': 'Jupiter v6',
+  'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc': 'Orca Whirlpool',
+  'So11111111111111111111111111111111111111112': 'Wrapped SOL',
+  'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s': 'Metaplex Token Metadata',
+  'MagicEden_v2': 'Magic Eden v2',
+  'cndy3Z4yapfJBmL3ShUp5exZKqR3z33thTzeNMm2gRZ': 'Candy Machine v2',
+  'NativeLoader1111111111111111111111111111111': 'Native Loader',
+};
+
+// ─── Fetch transaction from Helius RPC ────────────────────────────────────────
+async function fetchTransaction(signature: string) {
+  const body = {
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'getTransaction',
+    params: [signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }],
+  };
+  const res = await fetch(HELIUS_RPC, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-    cache: 'no-store',
-  })
-  return res.json()
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`RPC error: ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(`RPC: ${data.error.message}`);
+  return data.result;
 }
 
-async function getTransaction(sig: string) {
-  return rpcPost('getTransaction', [sig, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }])
+// ─── Parse programs and key metrics ──────────────────────────────────────────
+function parseTransaction(tx: Record<string, unknown>) {
+  const programs: string[] = [];
+  const meta = tx?.meta as Record<string, unknown>;
+  const transaction = tx?.transaction as Record<string, unknown>;
+  const message = transaction?.message as Record<string, unknown>;
+  const instructions = (message?.instructions as Array<Record<string, unknown>>) || [];
+
+  for (const ix of instructions) {
+    const pid = (ix.programId as string) || (ix.program as string) || '';
+    if (pid) programs.push(PROGRAM_LABELS[pid] || pid.slice(0, 12) + '...');
+  }
+
+  const preBalances = (meta?.preBalances as number[]) || [];
+  const postBalances = (meta?.postBalances as number[]) || [];
+  const solChange = preBalances[0] && postBalances[0]
+    ? ((postBalances[0] - preBalances[0]) / 1e9).toFixed(4)
+    : null;
+
+  const preTokenBalances = (meta?.preTokenBalances as Array<Record<string, unknown>>) || [];
+  const postTokenBalances = (meta?.postTokenBalances as Array<Record<string, unknown>>) || [];
+  const tokenChanges = postTokenBalances.length - preTokenBalances.length;
+  const logMessages = ((meta?.logMessages as string[]) || []).slice(0, 20).join('\n');
+  const err = meta?.err;
+
+  return {
+    programs: [...new Set(programs)],
+    solChange,
+    tokenChanges,
+    logMessages,
+    err,
+    accountCount: ((message?.accountKeys as unknown[]) || []).length,
+    instructionCount: instructions.length,
+    blockTime: tx?.blockTime,
+    fee: meta?.fee,
+  };
 }
 
-async function getBalance(address: string): Promise<number> {
-  const data = await rpcPost('getBalance', [address])
-  return (data?.result?.value ?? 0) / 1e9
+// ─── Build Gemini prompt ──────────────────────────────────────────────────────
+function buildPrompt(parsed: ReturnType<typeof parseTransaction>, rawSummary: string): string {
+  return `You are AI-Sentinel, a specialized Solana blockchain security AI. Analyze this transaction data and return ONLY a valid JSON object with no markdown, no code fences, no explanation.
+
+Transaction Summary:
+${rawSummary}
+
+Programs involved: ${parsed.programs.join(', ')}
+SOL change: ${parsed.solChange ?? 'unknown'} SOL
+Token balance changes: ${parsed.tokenChanges}
+Instruction count: ${parsed.instructionCount}
+Account count: ${parsed.accountCount}
+Transaction fee: ${parsed.fee ? (parsed.fee / 1e9).toFixed(6) + ' SOL' : 'unknown'}
+Status: ${parsed.err ? 'FAILED - ' + JSON.stringify(parsed.err) : 'SUCCESS'}
+Log messages (partial):
+${parsed.logMessages || 'None'}
+
+Return this EXACT JSON schema:
+{
+  "riskLevel": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
+  "riskScore": <integer 0-100>,
+  "summary": "<2-3 sentences in plain English explaining what this transaction does>",
+  "redFlags": ["<specific red flag 1>", ...],
+  "recommendation": "<one clear action sentence: SAFE TO PROCEED / PROCEED WITH CAUTION / DO NOT SIGN>",
+  "programsInvolved": ["<program name>", ...],
+  "transferDetails": "<what assets moved and where>",
+  "aiModel": "Gemini 1.5 Flash"
 }
 
-async function getSignatureCount(address: string): Promise<number> {
-  const data = await rpcPost('getSignaturesForAddress', [address, { limit: 20 }])
-  return Array.isArray(data?.result) ? data.result.length : 0
+Risk scoring guide:
+0-25: LOW - Standard system/token program operations, small SOL transfers
+26-50: MEDIUM - DEX swaps, NFT mints, unknown programs with reasonable patterns
+51-75: HIGH - Unusual approvals, unknown programs, large transfers to unknown wallets
+76-100: CRITICAL - Drainer patterns, unlimited approvals, known exploit signatures, phishing programs`;
 }
 
+// ─── Call Gemini API ──────────────────────────────────────────────────────────
 async function callGemini(prompt: string): Promise<string> {
-  const key = process.env.GEMINI_API_KEY
-  if (!key) throw new Error('GEMINI_API_KEY is not set in environment variables')
-
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.15, maxOutputTokens: 700 },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-        ],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
       }),
+      signal: AbortSignal.timeout(20000),
     }
-  )
-  const data = await res.json()
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+  );
+  if (!res.ok) throw new Error(`Gemini API error: ${res.status}`);
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
-function parseResponse(text: string) {
-  const riskMatch = text.match(/RISK:\s*(LOW|MEDIUM|HIGH|CRITICAL)/i)
-  const risk = (riskMatch?.[1]?.toUpperCase() ?? 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-
-  const flagsMatch = text.match(/FLAGS?:[\s\S]*?(?=SUMMARY:|$)/i)
-  const flags = (flagsMatch?.[0] ?? '')
-    .split('\n')
-    .slice(1)
-    .map((l: string) => l.replace(/^[\-\*•]\s*/, '').trim())
-    .filter((l: string) => l.length > 4)
-
-  const summaryMatch = text.match(/SUMMARY:\s*(.+?)(?=\nRECOMMENDATION:|$)/is)
-  const summary = summaryMatch?.[1]?.trim() ?? 'Transaction analyzed.'
-
-  const recMatch = text.match(/RECOMMENDATION:\s*([\s\S]+?)$/i)
-  const recommendation = recMatch?.[1]?.trim() ?? 'Review carefully before proceeding.'
-
-  return { risk, flags, summary, recommendation }
-}
-
+// ─── Route handler ────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const start = Date.now();
   try {
-    const body = await req.json()
-    const signature: string = body?.signature ?? ''
-
-    if (!signature || signature.length < 40 || signature.length > 120) {
-      return NextResponse.json(
-        { error: 'Invalid signature. A Solana transaction signature is 87-88 characters long.' },
-        { status: 400 }
-      )
+    const { signature } = await req.json();
+    if (!signature || typeof signature !== 'string' || signature.length < 40) {
+      return NextResponse.json({ error: 'Invalid transaction signature.' }, { status: 400 });
+    }
+    if (!GEMINI_API_KEY) {
+      return NextResponse.json({ error: 'Gemini API key not configured. Add GEMINI_API_KEY in Vercel env vars.' }, { status: 500 });
     }
 
-    const txData = await getTransaction(signature)
+    // 1. Fetch from Helius RPC
+    const tx = await fetchTransaction(signature.trim());
+    if (!tx) return NextResponse.json({ error: 'Transaction not found. It may be too old or on devnet.' }, { status: 404 });
 
-    if (!txData?.result) {
-      return NextResponse.json(
-        { error: 'Transaction not found on Solana mainnet. It may be too old (>60 days) or the signature is incorrect. Find a fresh transaction on solscan.io.' },
-        { status: 404 }
-      )
-    }
+    // 2. Parse
+    const parsed = parseTransaction(tx);
+    const rawSummary = JSON.stringify(tx).slice(0, 2000);
 
-    const tx = txData.result
-    const accounts: string[] = []
-    try {
-      const keys = tx?.transaction?.message?.accountKeys ?? []
-      for (const k of keys) accounts.push(typeof k === 'string' ? k : k.pubkey)
-    } catch { /* empty */ }
+    // 3. Analyze with Gemini
+    const prompt = buildPrompt(parsed, rawSummary);
+    const aiText = await callGemini(prompt);
 
-    const dest = accounts[1] ?? accounts[0] ?? null
-    const [destBalance, destHistory] = dest
-      ? await Promise.all([getBalance(dest), getSignatureCount(dest)])
-      : [0, 0]
+    // 4. Parse JSON response
+    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('AI returned invalid format. Try again.');
+    const result = JSON.parse(jsonMatch[0]);
+    result.analysisTime = Date.now() - start;
 
-    const context = {
-      rpc_provider: 'Helius (Colosseum sponsor)',
-      fee_lamports: tx.meta?.fee,
-      transaction_error: tx.meta?.err,
-      block_time_unix: tx.blockTime,
-      slot: tx.slot,
-      accounts_involved: accounts.slice(0, 8),
-      sol_balance_changes: (tx.meta?.preBalances ?? []).map((pre: number, i: number) => ({
-        account: accounts[i] ?? i,
-        change_sol: (((tx.meta?.postBalances?.[i] ?? 0) - pre) / 1e9).toFixed(6),
-      })).slice(0, 6),
-      program_logs: (tx.meta?.logMessages ?? []).slice(0, 10),
-      inner_instruction_count: tx.meta?.innerInstructions?.length ?? 0,
-      destination_wallet: {
-        address: dest,
-        balance_sol: destBalance.toFixed(4),
-        recent_tx_count: destHistory,
-        is_new_wallet: destHistory < 3,
-        is_empty: destBalance < 0.01,
-      },
-    }
-
-    const prompt = `You are a Solana blockchain security expert. Analyze the following transaction data and return a structured security assessment.
-
-Respond in EXACTLY this format — no extra sections:
-RISK: [LOW / MEDIUM / HIGH / CRITICAL]
-FLAGS:
-- [red flag 1, or "No significant red flags detected" if LOW]
-- [red flag 2 if present]
-SUMMARY: [one clear sentence — what this transaction does and to whom]
-RECOMMENDATION: [one of: "Proceed safely." / "Proceed with caution — [reason]." / "DO NOT SIGN — [specific reason]."]
-
-Transaction Analysis Context:
-${JSON.stringify(context, null, 2)}
-
-Security checklist — check ALL 7:
-1. Destination wallet new (< 3 txs) or empty? → HIGH risk indicator
-2. Large SOL outflows to unknown wallets? → HIGH/CRITICAL
-3. Transaction failed (err field non-null)? → note it explicitly
-4. Abnormally high fees (> 100,000 lamports)? → suspicious
-5. Suspicious program logs mentioning drain, sweep, approve, setAuthority?
-6. Token draining patterns (many SPL token transfers out)?
-7. Inner instruction complexity (> 5 could be obfuscation)?
-
-Be direct and specific. Do not hedge.`
-
-    const geminiText = await callGemini(prompt)
-    const parsed = parseResponse(geminiText)
-
-    return NextResponse.json({
-      ...parsed,
-      txDetails: {
-        fee: tx.meta?.fee,
-        blockTime: tx.blockTime,
-        slot: tx.slot,
-        accounts: accounts.slice(0, 5),
-        destBalance,
-        destHistory,
-        err: !!tx.meta?.err,
-      },
-    })
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unexpected server error'
-    console.error('[AI-Sentinel API Error]', message)
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json(result);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[AI-Sentinel] Error:', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

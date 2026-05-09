@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-}
-
-module.exports = nextConfig
+  env: {
+    NEXT_PUBLIC_HELIUS_RPC: process.env.HELIUS_RPC,
+  },
+};
+module.exports = nextConfig;
