@@ -1,93 +1,102 @@
 # 🛡️ AI-Sentinel: Real-time Solana Transaction Guard
 
-> An autonomous AI firewall that protects Solana DeFi users from malicious transactions, phishing, and exploits — before they sign.
+> An autonomous AI security guard that analyzes Solana transactions for phishing, exploits, and drainers — powered by Google Gemini AI and live on-chain data — **before you sign**.
 
-[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat&logo=streamlit&logoColor=white)](https://streamlit.io)
-[![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
+[![Next.js](https://img.shields.io/badge/Next.js_14-black?style=flat&logo=next.js)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![Solana](https://img.shields.io/badge/Solana-9945FF?style=flat&logo=solana&logoColor=white)](https://solana.com)
 [![Gemini](https://img.shields.io/badge/Gemini_AI-4285F4?style=flat&logo=google&logoColor=white)](https://aistudio.google.com)
+[![Vercel](https://img.shields.io/badge/Vercel-black?style=flat&logo=vercel)](https://vercel.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+---
 
 ## 🎯 The Problem
 
-DeFi users on Solana lose **billions annually** to phishing attacks, malicious dApps, and complex exploit transactions they cannot read before clicking Confirm. Existing tools show raw blockchain logs. Nobody shows you **answers**.
+DeFi users on Solana lost **$4.2B+** to phishing attacks, malicious dApps, and exploit transactions in 2024. Existing block explorers show raw data that most users **cannot interpret before clicking Confirm**.
 
 ## 💡 The Solution
 
-AI-Sentinel intercepts any Solana transaction signature, fetches live on-chain state in real-time, and runs it through Google Gemini to generate:
+AI-Sentinel accepts any Solana transaction signature, fetches **live on-chain data in real-time**, and runs it through **Google Gemini 1.5 Flash** to return:
 
-- ✅ **Risk Score**: LOW / MEDIUM / HIGH / CRITICAL
-- 🔎 **Red Flags**: Specific reasons for the risk level
+- ✅ **Risk Score**: `LOW` / `MEDIUM` / `HIGH` / `CRITICAL`
+- 🚩 **Red Flags**: Specific reasons for the risk level
 - 📝 **Plain-English Summary**: What this transaction actually does
-- 🚨 **Recommendation**: Proceed safely / Proceed with caution / DO NOT SIGN
+- 🎯 **Clear Recommendation**: Proceed safely / Proceed with caution / **DO NOT SIGN**
 
-## 🚀 Live Demo
+All in **under 2 seconds**.
 
-> Deploy to Streamlit Cloud and add link here
+---
 
 ## 🏗️ Architecture
 
 ```
 User Input (tx signature)
-    ↓
-Solana JSON-RPC API (mainnet)
-    ↓ (fetch tx data + wallet history + balance)
-Google Gemini 1.5 Flash
-    ↓ (LLM risk analysis)
-Streamlit UI
-    ↓
-Risk Score + Plain-English Explanation
+        ↓
+Next.js API Route (/api/analyze)
+        ↓
+Solana JSON-RPC Mainnet (getTransaction + getBalance + getSignaturesForAddress)
+        ↓
+Google Gemini 1.5 Flash (LLM risk analysis with structured prompt)
+        ↓
+Parsed JSON response → React UI
+        ↓
+Risk verdict + flags + recommendation
 ```
 
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Blockchain | Solana Mainnet JSON-RPC API |
+| Frontend | Next.js 14 (App Router) + TypeScript |
+| Styling | Tailwind CSS + Custom CSS |
+| Backend | Next.js API Routes (Edge-compatible) |
+| Blockchain | Solana JSON-RPC API (mainnet-beta) |
 | AI / LLM | Google Gemini 1.5 Flash |
-| Backend | Python 3.11 |
-| Frontend | Streamlit |
-| Deployment | Streamlit Community Cloud |
+| Deployment | Vercel |
 
 ## ⚡ Quick Start
 
 ```bash
 git clone https://github.com/gopichandchalla16/AI-Sentinel
 cd AI-Sentinel
-pip install -r requirements.txt
-export GEMINI_API_KEY="your_key_here"
-streamlit run app.py
+npm install
+
+# Add your Gemini API key (free at aistudio.google.com)
+echo GEMINI_API_KEY=your_key_here > .env.local
+
+npm run dev
+# Open http://localhost:3000
 ```
 
-Get your free Gemini API key at: https://aistudio.google.com
+## 🚀 Deploy to Vercel
 
-Paste any Solana transaction signature from [solscan.io](https://solscan.io)
+1. Import this repo at [vercel.com/new](https://vercel.com/new)
+2. Add environment variable: `GEMINI_API_KEY=your_key`
+3. Deploy — done.
 
 ## 👥 Team
 
 | Name | Role |
 |---|---|
-| **Gopichand Challa** | AI/Data Engineer & Project Lead |
-| **Kaviya** | Frontend Engineer & UX Lead |
-| **Kalisetty** | Backend Engineer & DevOps Lead |
+| **Gopichand Challa** | Lead Engineer · AI/ML + Blockchain |
+| **Kaviya** | Frontend Engineer · UX Design |
+| **Kalisetty** | Backend Engineer · DevOps |
 
 ## 📈 Business Model
 
-- **Free tier**: 10 transaction scans/day
-- **Pro ($9/mo)**: Unlimited scans + wallet monitoring alerts
-- **Enterprise**: API access for protocols and wallets
+- **Free tier**: 20 scans/day
+- **Pro ($9/mo)**: Unlimited + wallet monitoring alerts
+- **Enterprise API**: For wallets and protocols
 
 ## 🔮 Roadmap
 
-- [ ] Browser extension for real-time wallet protection
-- [ ] Anchor program for on-chain verification
-- [ ] Webhook alerts for monitored wallets
-- [ ] Multi-chain support
-- [ ] API for protocol integrations
-
-## 📄 License
-
-MIT License — Open source and composable with the Solana ecosystem.
+- [ ] Browser extension (Chrome/Firefox)
+- [ ] Real-time wallet monitoring with alerts
+- [ ] Helius webhook integration for streaming txs
+- [ ] Phantom Connect wallet integration (Colosseum sponsor)
+- [ ] Multi-chain support (Ethereum, Base)
 
 ---
 
-Built with ❤️ for the **Colosseum Frontier Hackathon 2026** 🏔️
+*Built with ❤️ for the **Colosseum Frontier Hackathon 2026** 🏔️*
