@@ -1,19 +1,27 @@
-import HeroSection from '@/components/HeroSection';
-import TransactionScanner from '@/components/TransactionScanner';
-import StatsBar from '@/components/StatsBar';
-import HowItWorks from '@/components/HowItWorks';
-import Footer from '@/components/Footer';
+import Navbar from '@/components/Navbar'
+import AnimatedBackground from '@/components/AnimatedBackground'
+import HeroSection from '@/components/HeroSection'
+import JudgeBanner from '@/components/JudgeBanner'
+import StatsBar from '@/components/StatsBar'
+import TabContainer from '@/components/TabContainer'
+import HowItWorks from '@/components/HowItWorks'
+import UseCases from '@/components/UseCases'
+import BusinessModel from '@/components/BusinessModel'
+import Footer from '@/components/Footer'
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#0a0a0f]">
+    <main className="min-h-screen" style={{ backgroundColor: '#0a0a0f' }}>
+      <AnimatedBackground />
+      <Navbar />
       <HeroSection />
+      <JudgeBanner />
       <StatsBar />
-      <section id="scanner" className="max-w-4xl mx-auto px-4 py-12">
-        <TransactionScanner />
-      </section>
+      <TabContainer />
       <HowItWorks />
+      <UseCases />
+      <BusinessModel />
       <Footer />
     </main>
-  );
+  )
 }
