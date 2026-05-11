@@ -35,7 +35,7 @@ The data to prevent these attacks exists on-chain — but 99% of users cannot re
 - 🔬 **Program Scanner** — verify any Solana smart contract before interacting
 - 💬 **AI Chat** — ask follow-up questions in plain English after any scan
 - 🌧️ **Matrix Terminal UI** — immersive animated security dashboard
-- ⚡ **MEV Attack Detector** — identifies front-running and sandwich attacks
+- ⚡ **MEV Attack Detector** — identifies front-running and sandwich attacks with dynamic real-time scoring
 - 🔎 **Address Intelligence Registry** — known malicious address lookup
 
 ---
@@ -75,7 +75,7 @@ The data to prevent these attacks exists on-chain — but 99% of users cannot re
 | 💬 AI chat (ask follow-up questions) | ✅ Live |
 | ⚠️ 7 threat categories detection | ✅ Live |
 | 🌧️ Matrix Rain terminal background | ✅ Live |
-| ⚡ MEV attack detector | ✅ Live |
+| ⚡ MEV attack detector (dynamic real-time scoring) | ✅ Live |
 | 🔎 Address Intelligence Registry | ✅ Live |
 | 🟢 System health dashboard | ✅ Live |
 | 📤 Share scan results | ✅ Live |
@@ -166,4 +166,4 @@ Enterprise — Custom  : White-label SDK, custom threat models, SLA, on-premise
 **📜 License:** MIT  
 **🏆 Hackathon:** [Colosseum Frontier 2026](https://colosseum.org/frontier)  
 
-<!-- v4: Matrix UI · MEV Detector · Live Threat Pulse · Address Intelligence · TS fix da69eeb -->
+<!-- v5: MEV Detector fix — dynamic real-time risk cards, no CLEAN+85 contradiction, demo buttons, estimated loss display -->
