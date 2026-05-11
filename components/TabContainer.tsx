@@ -1,68 +1,67 @@
-"use client"
-import { useState, useEffect } from 'react'
-import WalletProfiler from './WalletProfiler'
-import ThreatFeed from './ThreatFeed'
-import ProgramScanner from './ProgramScanner'
-import ScannerPanel from './ScannerPanel'
+'use client';
+import { useState } from 'react';
+import ScannerPanel from './ScannerPanel';
+import WalletProfiler from './WalletProfiler';
+import ThreatFeed from './ThreatFeed';
+import ProgramScanner from './ProgramScanner';
+import MEVDetector from './MEVDetector';
+import AddressIntelligence from './AddressIntelligence';
 
-const TABS = [
-  { id: 'scanner', label: 'Tx Scanner', emoji: '🔍' },
-  { id: 'wallet', label: 'Wallet Profiler', emoji: '👛' },
-  { id: 'threats', label: 'Live Threat Feed', emoji: '📡' },
-  { id: 'program', label: 'Program Scanner', emoji: '🔬' },
-]
+type Tab = 'scanner' | 'wallet' | 'threats' | 'program' | 'mev' | 'address';
 
 export default function TabContainer() {
-  const [active, setActive] = useState('scanner')
-  const [scannerSig, setScannerSig] = useState('')
+  const [active, setActive] = useState<Tab>('scanner');
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('sentinel_scan_sig')
-      if (stored) {
-        setScannerSig(stored)
-        setActive('scanner')
-        localStorage.removeItem('sentinel_scan_sig')
-      }
-    } catch {}
-  }, [])
-
-  const switchToScanner = (sig: string) => {
-    try { localStorage.setItem('sentinel_scan_sig', sig) } catch {}
-    setScannerSig(sig)
-    setActive('scanner')
-  }
+  const tabs: { id: Tab; label: string; icon: string }[] = [
+    { id: 'scanner', label: 'TX Scanner', icon: '🔍' },
+    { id: 'wallet', label: 'Wallet Profiler', icon: '👛' },
+    { id: 'threats', label: 'Live Threats', icon: '📡' },
+    { id: 'program', label: 'Program Scanner', icon: '🔬' },
+    { id: 'mev', label: 'MEV Detector', icon: '⚡' },
+    { id: 'address', label: 'Address Intel', icon: '🔎' },
+  ];
 
   return (
-    <section id="tabs" className="relative z-10 max-w-5xl mx-auto px-4 pb-8">
-      <div
-        className="flex border-b overflow-x-auto"
-        style={{ borderColor: '#1e1e2e' }}
-      >
-        {TABS.map((tab) => (
+    <div style={{ width: '100%', maxWidth: '1100px', margin: '0 auto', padding: '0 1rem' }}>
+      {/* Tab Bar */}
+      <div style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '0.5rem',
+        marginBottom: '1.5rem',
+        borderBottom: '1px solid rgba(153,69,255,0.3)',
+        paddingBottom: '0.75rem',
+      }}>
+        {tabs.map(t => (
           <button
-            key={tab.id}
-            onClick={() => setActive(tab.id)}
-            className="px-6 py-3 text-sm font-medium whitespace-nowrap transition-all"
+            key={t.id}
+            onClick={() => setActive(t.id)}
             style={{
-              color: active === tab.id ? '#9945FF' : '#94A3B8',
-              borderBottom:
-                active === tab.id ? '2px solid #9945FF' : '2px solid transparent',
-              backgroundColor:
-                active === tab.id ? 'rgba(153,69,255,0.08)' : 'transparent',
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              border: active === t.id ? '1px solid #9945FF' : '1px solid rgba(153,69,255,0.3)',
+              background: active === t.id ? 'rgba(153,69,255,0.2)' : 'rgba(0,0,0,0.3)',
+              color: active === t.id ? '#fff' : 'rgba(255,255,255,0.6)',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: active === t.id ? 700 : 400,
+              transition: 'all 0.2s',
             }}
           >
-            {tab.emoji} {tab.label}
+            {t.icon} {t.label}
           </button>
         ))}
       </div>
 
-      <div className="mt-6">
-        {active === 'scanner' && <ScannerPanel prefillSig={scannerSig} />}
+      {/* Tab Content */}
+      <div style={{ marginTop: '0.5rem' }}>
+        {active === 'scanner' && <ScannerPanel />}
         {active === 'wallet' && <WalletProfiler />}
-        {active === 'threats' && <ThreatFeed onScanDetails={switchToScanner} />}
+        {active === 'threats' && <ThreatFeed />}
         {active === 'program' && <ProgramScanner />}
+        {active === 'mev' && <MEVDetector />}
+        {active === 'address' && <AddressIntelligence />}
       </div>
-    </section>
-  )
+    </div>
+  );
 }
