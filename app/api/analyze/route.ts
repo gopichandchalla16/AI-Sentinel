@@ -20,12 +20,10 @@ const KNOWN_DRAINERS: Record<string, string> = {
 };
 
 // ── Helius Enhanced API — much better than raw RPC ────────────────────────
-// Helius DEV key works on MAINNET (it's just a dev-tier rate limit, not devnet)
 async function fetchTransactionHelius(sig: string): Promise<Record<string, unknown> | null> {
   const rpcUrl = process.env.HELIUS_RPC || process.env.NEXT_PUBLIC_HELIUS_RPC || '';
   if (!rpcUrl) return null;
 
-  // Try Helius Enhanced Transactions API first (much richer data)
   try {
     const apiKey = rpcUrl.split('api-key=')[1]?.split('&')[0];
     if (apiKey) {
@@ -47,7 +45,6 @@ async function fetchTransactionHelius(sig: string): Promise<Record<string, unkno
     }
   } catch {}
 
-  // Fallback to standard JSON-RPC
   try {
     const rpcRes = await fetch(rpcUrl, {
       method: 'POST',
@@ -69,8 +66,8 @@ async function fetchTransactionHelius(sig: string): Promise<Record<string, unkno
 
 // ── Extract context from both enhanced and raw tx formats ─────────────────
 function extractContext(tx: Record<string, unknown>) {
-  if (tx._enhanced) {
-    // Helius Enhanced Transaction format
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if ((tx as any)._enhanced) {
     const accountData = (tx.accountData as any[]) || [];
     const instructions = (tx.instructions as any[]) || [];
     const tokenTransfers = (tx.tokenTransfers as any[]) || [];
@@ -83,20 +80,20 @@ function extractContext(tx: Record<string, unknown>) {
     const drainerHit = programIds.find((p) => KNOWN_DRAINERS[p]);
 
     return {
+      _enhanced: true as const,
       accountCount: accountData.length || 0,
       programIds,
       solChangeSol: (nativeChange / 1e9).toFixed(6),
       hasError: tx.transactionError !== null && tx.transactionError !== undefined,
       feeSol: ((tx.fee as number || 0) / 1e9).toFixed(6),
       tokenChanges: tokenTransfers.slice(0, 5),
-      logs: [],
+      logs: [] as string[],
       drainerHit: drainerHit ? KNOWN_DRAINERS[drainerHit] : null,
       type: tx.type as string || 'UNKNOWN',
       description: tx.description as string || '',
     };
   }
 
-  // Standard RPC format
   const meta = tx.meta as Record<string, unknown>;
   const transaction = tx.transaction as Record<string, unknown>;
   const message = transaction?.message as Record<string, unknown>;
@@ -121,6 +118,7 @@ function extractContext(tx: Record<string, unknown>) {
   const drainerHit = programIds.find((p) => KNOWN_DRAINERS[p]);
 
   return {
+    _enhanced: false as const,
     accountCount: accountKeys.length,
     programIds,
     solChangeSol: (solChange / 1e9).toFixed(6),
@@ -214,12 +212,9 @@ export async function POST(request: Request) {
     }
 
     const sig = signature.trim();
-
-    // Fetch transaction from Helius (dev key works on mainnet!)
     const tx = await fetchTransactionHelius(sig);
 
     if (!tx) {
-      // Transaction genuinely not found — show honest simulated result
       return Response.json(
         {
           riskScore: 8,
@@ -247,7 +242,6 @@ export async function POST(request: Request) {
 
     const ctx = extractContext(tx);
 
-    // Build Gemini prompt
     const prompt = `You are a Solana blockchain security expert. Analyze this transaction for security threats.
 
 Transaction Data:
@@ -285,12 +279,9 @@ Respond with ONLY valid JSON (no markdown, no code fences):
     let parsed: Record<string, unknown> | null = null;
     const rawGemini = await callGemini(prompt);
     if (rawGemini) {
-      try {
-        parsed = JSON.parse(rawGemini);
-      } catch {}
+      try { parsed = JSON.parse(rawGemini); } catch {}
     }
 
-    // If drainer detected, force CRITICAL regardless of AI response
     if (ctx.drainerHit) {
       parsed = {
         ...(parsed || ruleBased(ctx)),
@@ -306,14 +297,14 @@ Respond with ONLY valid JSON (no markdown, no code fences):
     }
 
     const result = parsed || ruleBased(ctx);
-    const dataSource = `LIVE — Solana Mainnet via Helius${ctx._enhanced ? ' Enhanced' : ''} + ${
+    // FIX: use ctx._enhanced directly — now properly typed on both branches
+    const dataSource = `LIVE — Solana Mainnet via Helius${
+      ctx._enhanced ? ' Enhanced' : ''
+    } + ${
       parsed ? 'Gemini 1.5 Flash AI' : 'Rule-Based Engine'
     }`;
 
-    return Response.json(
-      { ...result, dataSource },
-      { headers: CORS }
-    );
+    return Response.json({ ...result, dataSource }, { headers: CORS });
   } catch (err) {
     console.error('[analyze] Unhandled error:', err);
     return Response.json(
