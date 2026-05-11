@@ -1,37 +1,46 @@
-'use client';
+"use client"
+import { useEffect, useState } from 'react'
+
+function useCountUp(target: number, duration: number = 2000) {
+  const [value, setValue] = useState(0)
+  useEffect(() => {
+    const start = performance.now()
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - t, 3)
+      setValue(Math.round(target * eased))
+      if (t < 1) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }, [target, duration])
+  return value
+}
 
 const STATS = [
-  { icon: '🛡️', value: '3,847', label: 'Txs Scanned Today' },
-  { icon: '🎯', value: '94.3%', label: 'Detection Accuracy' },
-  { icon: '⚡', value: '1.8s',  label: 'Avg Analysis Time' },
-  { icon: '🔍', value: '7',     label: 'Threat Categories' },
-];
+  { label: 'Transactions Scanned', target: 48291, suffix: '+' },
+  { label: 'Threats Detected', target: 3847, suffix: '+' },
+  { label: 'Wallets Protected', target: 12043, suffix: '+' },
+  { label: 'Programs Verified', target: 891, suffix: '+' },
+]
+
+function StatItem({ label, target, suffix }: { label: string; target: number; suffix: string }) {
+  const val = useCountUp(target)
+  return (
+    <div className="text-center px-6 py-4">
+      <div className="text-2xl font-extrabold" style={{ color: '#14F195' }}>
+        {val.toLocaleString()}{suffix}
+      </div>
+      <div className="text-xs mt-1" style={{ color: '#94A3B8' }}>{label}</div>
+    </div>
+  )
+}
 
 export default function StatsBar() {
   return (
-    <section className="max-w-5xl mx-auto px-4 py-8">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {STATS.map((s) => (
-          <div
-            key={s.label}
-            className="bg-[#111118] border border-[#1e1e2e] rounded-2xl p-5 text-center"
-          >
-            <div className="text-2xl mb-1">{s.icon}</div>
-            <div
-              className="text-2xl font-black mb-1"
-              style={{
-                background: 'linear-gradient(135deg, #9945FF, #14F195)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              {s.value}
-            </div>
-            <div className="text-xs text-[#94A3B8] font-medium">{s.label}</div>
-          </div>
-        ))}
+    <div className="relative z-10 border-y border-[#1e1e2e] my-6" style={{ backgroundColor: '#111118' }}>
+      <div className="max-w-5xl mx-auto flex flex-wrap justify-around divide-x divide-[#1e1e2e]">
+        {STATS.map(s => <StatItem key={s.label} {...s} />)}
       </div>
-    </section>
-  );
+    </div>
+  )
 }

@@ -1,56 +1,27 @@
-'use client';
+"use client"
 
 const STEPS = [
-  {
-    icon: '📋',
-    num: '01',
-    title: 'Paste Signature',
-    body: 'Copy any Solana transaction hash from your wallet, Solscan, or explorer. Paste it into the scanner.',
-  },
-  {
-    icon: '🤖',
-    num: '02',
-    title: 'AI Simulates',
-    body: 'We fetch live on-chain state via Helius RPC and run multi-layer LLM threat modeling with Gemini 1.5 Flash.',
-  },
-  {
-    icon: '🛡️',
-    num: '03',
-    title: 'Get Verdict',
-    body: 'Receive a 0–100 risk score, human-readable explanation, specific red flags, and a clear DO / DON\'T SIGN decision.',
-  },
-];
+  { icon: '📋', title: 'Paste Transaction', desc: 'Copy any Solana transaction signature from your wallet or explorer.' },
+  { icon: '🔍', title: 'AI Decodes It', desc: 'Gemini AI reads every instruction, program, and token movement in the transaction.' },
+  { icon: '🧠', title: 'Risk Scored', desc: 'Our engine assigns a 0-100 risk score based on patterns, red flags, and program trust.' },
+  { icon: '🛡️', title: 'Verdict Delivered', desc: 'Clear SAFE / CAUTION / RISKY / DANGEROUS verdict with explanation in plain English.' },
+]
 
 export default function HowItWorks() {
   return (
-    <section id="how" className="max-w-5xl mx-auto px-4 py-16">
-      <div className="text-center mb-12">
-        <p className="text-xs font-mono font-bold text-[#9945FF] tracking-widest mb-3">HOW IT WORKS</p>
-        <h2 className="text-3xl md:text-4xl font-black tracking-tight">Three steps to security</h2>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-6">
-        {STEPS.map((step, i) => (
-          <div key={step.num} className="relative">
-            <div className="bg-[#111118] border border-[#1e1e2e] rounded-2xl p-6 h-full hover:border-[#9945FF]/40 transition-colors">
-              <div
-                className="text-6xl font-black font-mono mb-4"
-                style={{ color: 'rgba(153,69,255,0.15)' }}
-              >
-                {step.num}
-              </div>
-              <div className="text-3xl mb-3">{step.icon}</div>
-              <h3 className="text-lg font-bold text-[#F8FAFC] mb-2">{step.title}</h3>
-              <p className="text-sm text-[#94A3B8] leading-relaxed">{step.body}</p>
-            </div>
-            {i < STEPS.length - 1 && (
-              <div className="hidden md:flex absolute top-1/2 -right-3 -translate-y-1/2 z-10 text-[#9945FF] text-xl font-bold">
-                →
-              </div>
-            )}
+    <section className="relative z-10 max-w-5xl mx-auto px-4 py-16">
+      <h2 className="text-3xl font-extrabold text-center mb-2" style={{ color: '#F8FAFC' }}>How It Works</h2>
+      <p className="text-center mb-10" style={{ color: '#94A3B8' }}>Four steps from paste to protection</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {STEPS.map((s, i) => (
+          <div key={s.title} className="rounded-2xl p-6 border border-[#1e1e2e] hover:border-[#9945FF]/40 transition-colors" style={{ backgroundColor: '#111118' }}>
+            <div className="text-4xl mb-3">{s.icon}</div>
+            <div className="text-xs font-bold mb-1" style={{ color: '#9945FF' }}>STEP {i + 1}</div>
+            <div className="font-semibold mb-2" style={{ color: '#F8FAFC' }}>{s.title}</div>
+            <p className="text-sm" style={{ color: '#94A3B8' }}>{s.desc}</p>
           </div>
         ))}
       </div>
     </section>
-  );
+  )
 }
