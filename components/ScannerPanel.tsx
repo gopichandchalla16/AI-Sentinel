@@ -5,13 +5,33 @@ import TransactionChat from './TransactionChat'
 const VERDICT_COLORS: Record<string, string> = {
   SAFE: '#14F195',
   CAUTION: '#F59E0B',
+  HIGH_RISK: '#F97316',
+  CRITICAL: '#EF4444',
   'HIGH RISK': '#F97316',
-  DANGEROUS: '#EF4444',
   'DO NOT SIGN': '#EF4444',
+  DANGEROUS: '#EF4444',
 }
 
-const DEMO_SIG =
-  '5KtP9xzMrCGpqhQ8y7eWvN2A4bXdLmRjFsZu3YoP1TqV6wHkDnIcBgEf0aJ8sQ2mXvNrL'
+const VERDICT_LABELS: Record<string, string> = {
+  SAFE: '✅ SAFE',
+  CAUTION: '⚠️ CAUTION',
+  HIGH_RISK: '🔴 HIGH RISK',
+  CRITICAL: '🚨 CRITICAL',
+  'HIGH RISK': '🔴 HIGH RISK',
+  'DO NOT SIGN': '🚫 DO NOT SIGN',
+  DANGEROUS: '🚨 DANGEROUS',
+}
+
+const REC_LABELS: Record<string, string> = {
+  SAFE_TO_PROCEED: '✅ Safe to Proceed',
+  PROCEED_WITH_CAUTION: '⚠️ Proceed with Caution',
+  DO_NOT_SIGN: '🚫 Do Not Sign — High Risk Detected',
+}
+
+const REAL_DEMO_SIGS = [
+  '3fmRCe3E5JKbTaBXRyDWXnjjCKqe5pGCZf8i7nKQjJ6WxZwZQf2N8r9qHkLBBm9VnjqNitnUEvSmfuvfWYRBrca',
+  '5Ry9KqzBkCGpqhQ8y7eWvN2A4bXdLmRjFsZu3YoP1TqV6wHkDnIcBgEf0aJ8sQ2mXvNrLtyPQs8ZcVfXhBmD3',
+]
 
 export default function ScannerPanel({ prefillSig }: { prefillSig?: string }) {
   const [signature, setSignature] = useState('')
@@ -19,6 +39,14 @@ export default function ScannerPanel({ prefillSig }: { prefillSig?: string }) {
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  const [loadingMsg, setLoadingMsg] = useState('')
+
+  const loadingMsgs = [
+    '🔗 Fetching transaction from Solana mainnet...',
+    '🔍 Parsing accounts, programs, token flows...',
+    '🤖 Running Gemini AI threat analysis...',
+    '📊 Generating security verdict...',
+  ]
 
   useEffect(() => {
     if (prefillSig && prefillSig.trim()) setSignature(prefillSig)
@@ -30,6 +58,12 @@ export default function ScannerPanel({ prefillSig }: { prefillSig?: string }) {
     setIsLoading(true)
     setError('')
     setResult(null)
+    setLoadingMsg(loadingMsgs[0])
+    let msgIdx = 0
+    const msgTimer = setInterval(() => {
+      msgIdx = Math.min(msgIdx + 1, loadingMsgs.length - 1)
+      setLoadingMsg(loadingMsgs[msgIdx])
+    }, 1800)
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
@@ -37,10 +71,12 @@ export default function ScannerPanel({ prefillSig }: { prefillSig?: string }) {
         body: JSON.stringify({ signature: target.trim() }),
       })
       const data = await res.json()
+      clearInterval(msgTimer)
       if (data.error) setError(data.error)
       else setResult(data)
     } catch {
-      setError('Failed to analyze transaction. Please check the signature and try again.')
+      clearInterval(msgTimer)
+      setError('Failed to connect to AI analysis server. Please try again.')
     }
     setIsLoading(false)
   }
@@ -49,17 +85,18 @@ export default function ScannerPanel({ prefillSig }: { prefillSig?: string }) {
     if (!result) return
     const shortSig = signature.slice(0, 8) + '...' + signature.slice(-8)
     const redFlagsCount = Array.isArray(result.redFlags) ? result.redFlags.length : 0
-    const text =
-      `🛡️ AI-Sentinel Transaction Scan\n` +
-      `━━━━━━━━━━━━━━━━━━━\n` +
-      `Signature: ${shortSig}\n` +
-      `Risk Score: ${result.riskScore}/100\n` +
-      `Verdict: ${result.verdict}\n` +
-      `${redFlagsCount > 0 ? '⚠️ ' + redFlagsCount + ' red flags detected' : '✅ No red flags found'}\n` +
-      `Recommendation: ${result.recommendation}\n` +
-      `━━━━━━━━━━━━━━━━━━━\n` +
-      `Scan yours free: https://ai-sentinel-three.vercel.app\n` +
-      `Built for @colosseum Frontier Hackathon 2026 | @GopichandAI`
+    const text = [
+      '🛡️ AI-Sentinel Transaction Scan',
+      '━━━━━━━━━━━━━━━━━━━',
+      `Signature: ${shortSig}`,
+      `Risk Score: ${result.riskScore}/100`,
+      `Verdict: ${result.verdict}`,
+      redFlagsCount > 0 ? `⚠️ ${redFlagsCount} red flags detected` : '✅ No red flags found',
+      `Recommendation: ${result.recommendation}`,
+      '━━━━━━━━━━━━━━━━━━━',
+      'Scan yours free: https://ai-sentinel-three.vercel.app',
+      'Built for @colosseum Frontier Hackathon 2026 | @GopichandAI',
+    ].join('\n')
     try {
       navigator.clipboard.writeText(text).then(() => {
         setCopied(true)
@@ -68,193 +105,168 @@ export default function ScannerPanel({ prefillSig }: { prefillSig?: string }) {
     } catch {}
   }
 
-  const verdictColor = result
-    ? VERDICT_COLORS[result.verdict] || '#94A3B8'
-    : '#94A3B8'
+  const verdictColor = result ? (VERDICT_COLORS[result.verdict] || '#94A3B8') : '#94A3B8'
+  const verdictLabel = result ? (VERDICT_LABELS[result.verdict] || result.verdict) : ''
+  const recLabel = result ? (REC_LABELS[result.recommendation] || result.recommendation) : ''
+
+  const tc = result?.threatCategories || {}
+  const activeThreats = Object.entries(tc).filter(([, v]) => v === true)
 
   return (
-    <div>
-      {/* Input card */}
-      <div
-        className="rounded-2xl border border-[#1e1e2e] p-6"
-        style={{ backgroundColor: '#111118' }}
-      >
-        <h2 className="text-xl font-bold mb-1" style={{ color: '#F8FAFC' }}>
-          🔍 Transaction Scanner
-        </h2>
-        <p className="text-sm mb-4" style={{ color: '#94A3B8' }}>
-          Paste any Solana transaction signature to get an instant AI risk analysis
-        </p>
-        <div className="flex gap-3">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <style>{`
+        @keyframes slideDown { from { opacity:0; transform:translateY(-12px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes spin { to { transform:rotate(360deg) } }
+        .scan-result { animation: slideDown 0.4s ease }
+      `}</style>
+
+      {/* Input Card */}
+      <div style={{ background: '#111118', border: '1px solid #1e1e2e', borderRadius: 16, padding: 24 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#9945FF', letterSpacing: '0.12em', marginBottom: 6 }}>AI TRANSACTION FIREWALL</div>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: '#F8FAFC', marginBottom: 4 }}>🔍 Scan Any Solana Transaction</h2>
+        <p style={{ fontSize: 13, color: '#94A3B8', marginBottom: 16 }}>Paste a transaction signature — our AI detects drainers, phishing, and malicious programs instantly.</p>
+
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <input
             value={signature}
-            onChange={(e) => setSignature(e.target.value)}
-            placeholder="Paste transaction signature..."
-            className="flex-1 px-4 py-3 rounded-xl border border-[#1e1e2e] text-sm outline-none focus:border-[#9945FF] transition-colors"
-            style={{ backgroundColor: '#0a0a0f', color: '#F8FAFC' }}
-            onKeyDown={(e) => e.key === 'Enter' && handleScan()}
+            onChange={e => setSignature(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleScan()}
+            placeholder="Paste Solana transaction signature (88 chars)..."
+            style={{ flex: 1, minWidth: 220, padding: '14px 16px', borderRadius: 10, border: `1px solid ${signature ? '#9945FF' : '#1e1e2e'}`, background: '#0a0a0f', color: '#F8FAFC', fontSize: 13, fontFamily: 'monospace', outline: 'none', transition: 'border-color 0.2s' }}
           />
           <button
             onClick={() => handleScan()}
             disabled={isLoading || !signature.trim()}
-            className="px-6 py-3 rounded-xl font-semibold text-sm transition-opacity disabled:opacity-50"
-            style={{
-              background: 'linear-gradient(135deg, #9945FF, #7c3aed)',
-              color: '#fff',
-            }}
+            style={{ padding: '14px 28px', borderRadius: 10, fontWeight: 700, fontSize: 14, background: isLoading ? '#1e1e2e' : 'linear-gradient(135deg, #9945FF, #7c3aed)', color: isLoading ? '#94A3B8' : '#fff', border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
           >
-            {isLoading ? 'Scanning...' : 'Scan'}
+            {isLoading ? 'Analyzing...' : '🛡️ Analyze'}
           </button>
         </div>
 
-        <button
-          onClick={() => {
-            setSignature(DEMO_SIG)
-            handleScan(DEMO_SIG)
-          }}
-          className="mt-2 text-xs transition-colors"
-          style={{ color: '#94A3B8' }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#9945FF')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#94A3B8')}
-        >
-          Try Demo Transaction →
-        </button>
+        <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
+          {REAL_DEMO_SIGS.map((s, i) => (
+            <button key={i} onClick={() => { setSignature(s); handleScan(s) }}
+              style={{ background: 'none', border: 'none', color: '#9945FF', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
+              → Try Demo #{i + 1}
+            </button>
+          ))}
+        </div>
 
         {isLoading && (
-          <div className="mt-3 flex items-center gap-2">
-            <div className="flex gap-1">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="w-2 h-2 rounded-full animate-bounce"
-                  style={{
-                    backgroundColor: '#9945FF',
-                    animationDelay: i * 0.15 + 's',
-                  }}
-                />
-              ))}
-            </div>
-            <span className="text-sm" style={{ color: '#9945FF' }}>
-              AI is analyzing the transaction...
-            </span>
+          <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'rgba(153,69,255,0.08)', borderRadius: 10, border: '1px solid rgba(153,69,255,0.2)' }}>
+            <div style={{ width: 20, height: 20, border: '2px solid #9945FF', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: '#9945FF', fontWeight: 600 }}>{loadingMsg}</span>
           </div>
         )}
 
         {error && (
-          <p className="mt-3 text-sm" style={{ color: '#EF4444' }}>
+          <div style={{ marginTop: 12, padding: '12px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, color: '#EF4444', fontSize: 13 }}>
             {error}
-          </p>
+          </div>
         )}
       </div>
 
-      {/* Result card */}
+      {/* Result Card */}
       {result && (
-        <div
-          className="mt-4 rounded-2xl border p-6 animate-slide-in"
-          style={{
-            backgroundColor: '#111118',
-            borderColor: verdictColor + '40',
-          }}
-        >
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <span
-                className="text-xs font-bold px-3 py-1 rounded-full"
-                style={{
-                  backgroundColor: verdictColor + '20',
-                  color: verdictColor,
-                }}
-              >
-                {result.verdict}
-              </span>
-              <div
-                className="text-4xl font-extrabold mt-2"
-                style={{ color: verdictColor }}
-              >
-                {result.riskScore}
-                <span className="text-lg">/100</span>
+        <div className="scan-result" style={{ background: '#111118', border: `1px solid ${verdictColor}40`, borderRadius: 16, overflow: 'hidden' }}>
+
+          {/* Header row */}
+          <div style={{ padding: '20px 24px', borderBottom: '1px solid #1e1e2e', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              {/* Risk score circle */}
+              <div style={{ width: 80, height: 80, borderRadius: '50%', border: `3px solid ${verdictColor}`, background: verdictColor + '15', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 22, fontWeight: 800, color: verdictColor, lineHeight: 1 }}>{result.riskScore}</span>
+                <span style={{ fontSize: 10, color: '#94A3B8' }}>/100</span>
               </div>
-              <div className="text-sm mt-1" style={{ color: '#94A3B8' }}>
-                Risk Score
+              <div>
+                <div style={{ display: 'inline-block', padding: '6px 14px', borderRadius: 9999, background: verdictColor + '20', color: verdictColor, fontWeight: 700, fontSize: 14, border: `1px solid ${verdictColor}40`, marginBottom: 8 }}>{verdictLabel}</div>
+                <div style={{ fontSize: 12, color: '#94A3B8' }}>Risk Score — lower is safer</div>
+                {result.dataSource && <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>📡 {result.dataSource}</div>}
               </div>
             </div>
-            <button
-              onClick={handleShare}
-              className="px-4 py-2 rounded-xl text-sm border border-[#1e1e2e] transition-colors"
-              style={{ color: '#94A3B8' }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.borderColor = 'rgba(153,69,255,0.6)')
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.borderColor = '#1e1e2e')
-              }
-            >
-              {copied ? '✅ Copied!' : '📤 Share Result'}
+            <button onClick={handleShare}
+              style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #1e1e2e', background: '#16161f', color: '#94A3B8', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>
+              {copied ? '✅ Copied!' : '📤 Share'}
             </button>
           </div>
 
-          {Array.isArray(result.redFlags) && result.redFlags.length > 0 && (
-            <div className="mb-4">
-              <div
-                className="text-xs font-bold mb-2"
-                style={{ color: '#EF4444' }}
-              >
-                ⚠️ RED FLAGS ({result.redFlags.length})
+          {/* AI Summary */}
+          {(result.summary || result.explanation) && (
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid #1e1e2e', background: 'rgba(153,69,255,0.04)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9945FF', letterSpacing: '0.1em', marginBottom: 8 }}>🧠 AI ANALYSIS</div>
+              <p style={{ fontSize: 14, color: '#F8FAFC', lineHeight: 1.7 }}>{result.summary || result.explanation}</p>
+            </div>
+          )}
+
+          {/* Threat Categories */}
+          {activeThreats.length > 0 && (
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid #1e1e2e' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#EF4444', letterSpacing: '0.1em', marginBottom: 10 }}>🚨 THREAT CATEGORIES DETECTED</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {activeThreats.map(([key]) => (
+                  <span key={key} style={{ padding: '4px 12px', borderRadius: 9999, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#EF4444', fontSize: 12, fontWeight: 600 }}>
+                    ⚠️ {key.replace(/([A-Z])/g, ' $1').trim()}
+                  </span>
+                ))}
               </div>
-              <ul className="space-y-1">
+            </div>
+          )}
+
+          {/* Red Flags */}
+          {Array.isArray(result.redFlags) && result.redFlags.length > 0 && (
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid #1e1e2e' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#F59E0B', letterSpacing: '0.1em', marginBottom: 10 }}>⚠️ RED FLAGS ({result.redFlags.length})</div>
+              <ul style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {result.redFlags.map((f: string, i: number) => (
-                  <li
-                    key={i}
-                    className="text-sm flex items-start gap-2"
-                    style={{ color: '#94A3B8' }}
-                  >
-                    <span style={{ color: '#EF4444' }}>•</span>
-                    {f}
+                  <li key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: '#94A3B8' }}>
+                    <span style={{ color: '#F59E0B', flexShrink: 0 }}>•</span>{f}
                   </li>
                 ))}
               </ul>
             </div>
           )}
 
-          {result.explanation && (
-            <div
-              className="mb-4 p-4 rounded-xl border border-[#1e1e2e]"
-              style={{ backgroundColor: '#0a0a0f' }}
-            >
-              <div
-                className="text-xs font-bold mb-2"
-                style={{ color: '#9945FF' }}
-              >
-                🧠 AI ANALYSIS
+          {/* Affected Assets */}
+          {Array.isArray(result.affectedAssets) && result.affectedAssets.length > 0 && (
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid #1e1e2e', display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>AFFECTED ASSETS</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {result.affectedAssets.map((a: string, i: number) => (
+                    <span key={i} style={{ padding: '2px 10px', borderRadius: 9999, background: '#1e1e2e', color: '#F8FAFC', fontSize: 12 }}>{a}</span>
+                  ))}
+                </div>
               </div>
-              <p className="text-sm" style={{ color: '#94A3B8' }}>
-                {result.explanation}
-              </p>
+              {result.estimatedLoss && (
+                <div>
+                  <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, marginBottom: 4 }}>ESTIMATED EXPOSURE</div>
+                  <div style={{ fontSize: 13, color: '#F8FAFC', fontWeight: 600 }}>{result.estimatedLoss}</div>
+                </div>
+              )}
             </div>
           )}
 
+          {/* Recommendation */}
           {result.recommendation && (
-            <div
-              className="p-4 rounded-xl border border-[#14F195]/20"
-              style={{ backgroundColor: 'rgba(20,241,149,0.05)' }}
-            >
-              <div
-                className="text-xs font-bold mb-1"
-                style={{ color: '#14F195' }}
-              >
-                💡 RECOMMENDATION
-              </div>
-              <p className="text-sm" style={{ color: '#F8FAFC' }}>
-                {result.recommendation}
-              </p>
+            <div style={{ padding: '16px 24px', background: result.verdict === 'SAFE' ? 'rgba(20,241,149,0.05)' : 'rgba(239,68,68,0.05)', borderTop: `1px solid ${verdictColor}25` }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: verdictColor, letterSpacing: '0.1em', marginBottom: 6 }}>💡 VERDICT</div>
+              <p style={{ fontSize: 15, color: '#F8FAFC', fontWeight: 700 }}>{recLabel}</p>
             </div>
           )}
+
+          {/* Solscan link */}
+          <div style={{ padding: '12px 24px', borderTop: '1px solid #1e1e2e', display: 'flex', gap: 10 }}>
+            <a href={`https://solscan.io/tx/${signature}`} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: 12, color: '#9945FF', textDecoration: 'none' }}>🔍 View on Solscan ↗</a>
+            <a href={`https://explorer.solana.com/tx/${signature}`} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: 12, color: '#94A3B8', textDecoration: 'none' }}>Solana Explorer ↗</a>
+          </div>
         </div>
       )}
 
-      {/* AI Chat — shown after scan */}
+      {/* AI Chat */}
       {result && (
-        <TransactionChat analysisResult={result} signature={signature} />
+        <TransactionChat result={result} signature={signature} />
       )}
     </div>
   )

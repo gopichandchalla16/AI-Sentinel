@@ -6,82 +6,83 @@ const TIERS = [
     price: '$0',
     period: '/ month',
     badge: null,
-    features: [
-      '✅ 50 transaction scans/day',
-      '✅ Wallet risk profiler',
-      '✅ Program scanner',
-      '✅ Basic threat feed',
-      '✅ Open source MIT',
-    ],
+    badgeColor: null,
+    features: ['✅ 50 transaction scans/day', '✅ Wallet risk profiler', '✅ Program scanner', '✅ Basic threat feed', '✅ AI transaction chat', '✅ Open source MIT'],
     cta: 'Use Now — Free',
-    ctaStyle: { backgroundColor: '#1e1e2e', color: '#F8FAFC' },
+    href: '#tabs',
+    highlight: false,
   },
   {
-    name: 'Pro Tier',
+    name: 'Pro',
     price: '$29',
     period: '/ month',
     badge: 'Most Popular',
-    features: [
-      '✅ Unlimited scans',
-      '✅ Real-time wallet monitoring alerts',
-      '✅ API access (1,000 req/day)',
-      '✅ Portfolio risk dashboard',
-      '✅ Webhook notifications',
-      '✅ Priority Gemini analysis',
-    ],
+    badgeColor: '#9945FF',
+    features: ['✅ Unlimited scans', '✅ Real-time wallet monitoring', '✅ API access (1,000 req/day)', '✅ Portfolio risk dashboard', '✅ Webhook alerts', '✅ Priority AI analysis'],
     cta: 'Coming Soon',
-    ctaStyle: { background: 'linear-gradient(135deg, #9945FF, #7c3aed)', color: '#fff' },
+    href: null,
+    highlight: true,
   },
   {
     name: 'Enterprise / SDK',
     price: 'Custom',
     period: '',
     badge: null,
-    features: [
-      '✅ White-label firewall SDK',
-      '✅ dApp pre-signing integration',
-      '✅ Custom threat models',
-      '✅ SLA guarantee',
-      '✅ On-premise deployment',
-      '✅ Audit report export',
-    ],
+    badgeColor: null,
+    features: ['✅ White-label firewall SDK', '✅ dApp pre-signing integration', '✅ Custom threat models', '✅ SLA guarantee', '✅ Audit report export', '✅ On-premise deployment'],
     cta: 'Contact Us',
-    ctaStyle: { backgroundColor: '#1e1e2e', color: '#F8FAFC' },
+    href: 'mailto:gopichandchalla16@gmail.com',
+    highlight: false,
     note: 'For wallets, dApps, and protocols',
   },
 ]
 
 export default function BusinessModel() {
   return (
-    <section className="relative z-10 max-w-5xl mx-auto px-4 py-16">
-      <h2 className="text-3xl font-extrabold text-center mb-2" style={{ color: '#F8FAFC' }}>Built to Scale</h2>
-      <p className="text-center mb-10" style={{ color: '#94A3B8' }}>From hackathon to ecosystem infrastructure</p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+    <section id="business" style={{ maxWidth: 960, margin: '0 auto', padding: '48px 16px 64px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 40 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: '#9945FF', letterSpacing: '0.12em', marginBottom: 8 }}>BUSINESS MODEL</p>
+        <h2 style={{ fontSize: 'clamp(1.8rem,4vw,2.5rem)', fontWeight: 900, color: '#F8FAFC', marginBottom: 8 }}>Built to Scale</h2>
+        <p style={{ color: '#94A3B8', fontSize: 15 }}>From hackathon to ecosystem infrastructure</p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 20, marginBottom: 32 }}>
         {TIERS.map(tier => (
-          <div key={tier.name} className={`rounded-2xl p-6 border flex flex-col gap-4 ${tier.badge ? 'border-[#9945FF]/60' : 'border-[#1e1e2e]'}`} style={{ backgroundColor: '#111118' }}>
+          <div key={tier.name} style={{ background: '#111118', border: `1px solid ${tier.highlight ? 'rgba(153,69,255,0.5)' : '#1e1e2e'}`, borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', gap: 16, boxShadow: tier.highlight ? '0 0 30px rgba(153,69,255,0.1)' : 'none' }}>
             {tier.badge && (
-              <span className="self-start text-xs font-bold px-3 py-1 rounded-full" style={{ backgroundColor: 'rgba(153,69,255,0.2)', color: '#9945FF' }}>{tier.badge}</span>
+              <span style={{ alignSelf: 'flex-start', padding: '3px 12px', borderRadius: 9999, background: 'rgba(153,69,255,0.15)', color: '#9945FF', fontSize: 11, fontWeight: 700, border: '1px solid rgba(153,69,255,0.3)' }}>{tier.badge}</span>
             )}
             <div>
-              <div className="font-bold text-lg" style={{ color: '#F8FAFC' }}>{tier.name}</div>
-              <div className="text-3xl font-extrabold mt-1" style={{ color: '#14F195' }}>
-                {tier.price}<span className="text-sm font-normal" style={{ color: '#94A3B8' }}>{tier.period}</span>
+              <div style={{ fontWeight: 700, fontSize: 16, color: '#F8FAFC' }}>{tier.name}</div>
+              <div style={{ fontSize: 30, fontWeight: 900, color: '#14F195', marginTop: 4 }}>
+                {tier.price}<span style={{ fontSize: 13, color: '#94A3B8', fontWeight: 400 }}>{tier.period}</span>
               </div>
-              {tier.note && <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>{tier.note}</p>}
+              {tier.note && <p style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>{tier.note}</p>}
             </div>
-            <ul className="space-y-2 flex-1">
-              {tier.features.map(f => (
-                <li key={f} className="text-sm" style={{ color: '#94A3B8' }}>{f}</li>
-              ))}
+            <ul style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {tier.features.map(f => <li key={f} style={{ fontSize: 13, color: '#94A3B8' }}>{f}</li>)}
             </ul>
-            <button className="w-full py-2.5 rounded-xl font-semibold text-sm transition-opacity hover:opacity-90" style={tier.ctaStyle}>{tier.cta}</button>
+            {tier.href ? (
+              <a href={tier.href} style={{ display: 'block', textAlign: 'center', padding: '10px 0', borderRadius: 10, fontWeight: 700, fontSize: 13, textDecoration: 'none', background: tier.highlight ? 'linear-gradient(135deg,#9945FF,#7c3aed)' : '#1e1e2e', color: tier.highlight ? '#fff' : '#F8FAFC' }}>{tier.cta}</a>
+            ) : (
+              <button style={{ padding: '10px 0', borderRadius: 10, fontWeight: 700, fontSize: 13, background: tier.highlight ? 'linear-gradient(135deg,#9945FF,#7c3aed)' : '#1e1e2e', color: tier.highlight ? '#fff' : '#94A3B8', border: 'none', cursor: 'default', opacity: 0.7 }}>{tier.cta}</button>
+            )}
           </div>
         ))}
       </div>
-      <div className="text-center p-6 rounded-2xl border border-[#1e1e2e]" style={{ backgroundColor: '#111118' }}>
-        <p className="text-lg font-bold mb-2" style={{ color: '#F8FAFC' }}>500M+ potential users · $4.2B lost in 2024 · 0 consumer-friendly AI scanners on Solana today</p>
-        <p className="text-sm" style={{ color: '#94A3B8' }}>
-          AI-Sentinel is the MetaMask Snaps equivalent for Solana — but smarter, faster, and built for everyone.
+
+      {/* TAM stats */}
+      <div style={{ background: '#111118', border: '1px solid #1e1e2e', borderRadius: 16, padding: 28, textAlign: 'center' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 32, marginBottom: 16 }}>
+          {[['500M+', 'Potential Users'], ['$4.2B', 'Lost to DeFi Scams in 2024'], ['0', 'Consumer-Friendly AI Scanners on Solana']].map(([val, label]) => (
+            <div key={label}>
+              <div style={{ fontSize: 26, fontWeight: 900, background: 'linear-gradient(135deg,#9945FF,#14F195)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{val}</div>
+              <div style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: 14, color: '#94A3B8', maxWidth: 560, margin: '0 auto' }}>
+          AI-Sentinel is the MetaMask Snaps equivalent for Solana — but smarter, faster, and built for everyone. Every wallet on Solana is a potential user.
         </p>
       </div>
     </section>

@@ -1,24 +1,33 @@
 "use client"
 
 const STEPS = [
-  { icon: '📋', title: 'Paste Transaction', desc: 'Copy any Solana transaction signature from your wallet or explorer.' },
-  { icon: '🔍', title: 'AI Decodes It', desc: 'Gemini AI reads every instruction, program, and token movement in the transaction.' },
-  { icon: '🧠', title: 'Risk Scored', desc: 'Our engine assigns a 0-100 risk score based on patterns, red flags, and program trust.' },
-  { icon: '🛡️', title: 'Verdict Delivered', desc: 'Clear SAFE / CAUTION / RISKY / DANGEROUS verdict with explanation in plain English.' },
+  { num: '01', icon: '📋', title: 'Paste Signature', desc: 'Copy any Solana transaction hash from your wallet, Solscan, or Phantom. Paste it into the scanner — no login or wallet connection required.' },
+  { num: '02', icon: '⛓️', title: 'Live Chain Fetch', desc: 'AI-Sentinel fetches the full transaction in real-time via Helius RPC: all accounts, program calls, token flows, and balance changes.' },
+  { num: '03', icon: '🤖', title: 'Gemini AI Analysis', desc: 'Google Gemini 1.5 Flash analyzes 7 threat categories: drainer patterns, authority transfers, flash loan vectors, excessive approvals, and more.' },
+  { num: '04', icon: '🛡️', title: 'Instant Verdict', desc: 'Get a 0-100 risk score, clear SAFE / CAUTION / DO NOT SIGN verdict, specific red flags, and an AI chat to ask follow-up questions.' },
 ]
 
 export default function HowItWorks() {
   return (
-    <section className="relative z-10 max-w-5xl mx-auto px-4 py-16">
-      <h2 className="text-3xl font-extrabold text-center mb-2" style={{ color: '#F8FAFC' }}>How It Works</h2>
-      <p className="text-center mb-10" style={{ color: '#94A3B8' }}>Four steps from paste to protection</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <section id="how" style={{ maxWidth: 960, margin: '0 auto', padding: '64px 16px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 48 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: '#9945FF', letterSpacing: '0.12em', marginBottom: 8 }}>HOW IT WORKS</p>
+        <h2 style={{ fontSize: 'clamp(1.8rem,4vw,2.5rem)', fontWeight: 900, color: '#F8FAFC', marginBottom: 8 }}>Four steps to complete security</h2>
+        <p style={{ color: '#94A3B8', fontSize: 15 }}>From paste to verdict in under 2 seconds</p>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20 }}>
         {STEPS.map((s, i) => (
-          <div key={s.title} className="rounded-2xl p-6 border border-[#1e1e2e] hover:border-[#9945FF]/40 transition-colors" style={{ backgroundColor: '#111118' }}>
-            <div className="text-4xl mb-3">{s.icon}</div>
-            <div className="text-xs font-bold mb-1" style={{ color: '#9945FF' }}>STEP {i + 1}</div>
-            <div className="font-semibold mb-2" style={{ color: '#F8FAFC' }}>{s.title}</div>
-            <p className="text-sm" style={{ color: '#94A3B8' }}>{s.desc}</p>
+          <div key={s.num} style={{ background: '#111118', border: '1px solid #1e1e2e', borderRadius: 16, padding: 24, position: 'relative', transition: 'border-color 0.2s' }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(153,69,255,0.4)')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = '#1e1e2e')}
+          >
+            <div style={{ fontSize: 48, fontWeight: 900, fontFamily: 'monospace', color: 'rgba(153,69,255,0.12)', lineHeight: 1, marginBottom: 12 }}>{s.num}</div>
+            <div style={{ fontSize: 28, marginBottom: 10 }}>{s.icon}</div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#F8FAFC', marginBottom: 8 }}>{s.title}</h3>
+            <p style={{ fontSize: 13, color: '#94A3B8', lineHeight: 1.7 }}>{s.desc}</p>
+            {i < STEPS.length - 1 && (
+              <div style={{ display: 'none' }} className="md:block" />
+            )}
           </div>
         ))}
       </div>

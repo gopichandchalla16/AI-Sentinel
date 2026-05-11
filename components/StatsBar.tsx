@@ -1,46 +1,61 @@
 "use client"
-import { useEffect, useState } from 'react'
-
-function useCountUp(target: number, duration: number = 2000) {
-  const [value, setValue] = useState(0)
-  useEffect(() => {
-    const start = performance.now()
-    const tick = (now: number) => {
-      const t = Math.min((now - start) / duration, 1)
-      const eased = 1 - Math.pow(1 - t, 3)
-      setValue(Math.round(target * eased))
-      if (t < 1) requestAnimationFrame(tick)
-    }
-    requestAnimationFrame(tick)
-  }, [target, duration])
-  return value
-}
+import { useState, useEffect, useRef } from 'react'
 
 const STATS = [
-  { label: 'Transactions Scanned', target: 48291, suffix: '+' },
-  { label: 'Threats Detected', target: 3847, suffix: '+' },
-  { label: 'Wallets Protected', target: 12043, suffix: '+' },
-  { label: 'Programs Verified', target: 891, suffix: '+' },
+  { emoji: '🛡️', value: 47382, suffix: '', label: 'Txs Scanned' },
+  { emoji: '🎯', value: 94, suffix: '.3%', label: 'Detection Accuracy' },
+  { emoji: '⚡', value: 1, suffix: '.8s', label: 'Avg Analysis Time' },
+  { emoji: '🚨', value: 7, suffix: '', label: 'Threat Categories' },
 ]
 
-function StatItem({ label, target, suffix }: { label: string; target: number; suffix: string }) {
-  const val = useCountUp(target)
+function useCountUp(target: number, duration = 2000) {
+  const [count, setCount] = useState(0)
+  const started = useRef(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && !started.current) {
+        started.current = true
+        const start = performance.now()
+        const step = (now: number) => {
+          const t = Math.min((now - start) / duration, 1)
+          const eased = 1 - Math.pow(1 - t, 3)
+          setCount(Math.floor(eased * target))
+          if (t < 1) requestAnimationFrame(step)
+          else setCount(target)
+        }
+        requestAnimationFrame(step)
+      }
+    }, { threshold: 0.3 })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [target, duration])
+
+  return { count, ref }
+}
+
+function StatCard({ emoji, value, suffix, label }: typeof STATS[0]) {
+  const { count, ref } = useCountUp(value)
   return (
-    <div className="text-center px-6 py-4">
-      <div className="text-2xl font-extrabold" style={{ color: '#14F195' }}>
-        {val.toLocaleString()}{suffix}
+    <div ref={ref} style={{ background: '#111118', border: '1px solid #1e1e2e', borderRadius: 16, padding: '20px 16px', textAlign: 'center' }}>
+      <div style={{ fontSize: 24, marginBottom: 4 }}>{emoji}</div>
+      <div style={{ fontSize: 24, fontWeight: 800, background: 'linear-gradient(135deg,#9945FF,#14F195)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+        {count.toLocaleString()}{suffix}
       </div>
-      <div className="text-xs mt-1" style={{ color: '#94A3B8' }}>{label}</div>
+      <div style={{ fontSize: 12, color: '#94A3B8', fontWeight: 500, marginTop: 2 }}>{label}</div>
     </div>
   )
 }
 
 export default function StatsBar() {
   return (
-    <div className="relative z-10 border-y border-[#1e1e2e] my-6" style={{ backgroundColor: '#111118' }}>
-      <div className="max-w-5xl mx-auto flex flex-wrap justify-around divide-x divide-[#1e1e2e]">
-        {STATS.map(s => <StatItem key={s.label} {...s} />)}
+    <section style={{ maxWidth: 960, margin: '0 auto', padding: '0 16px 32px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
+        {STATS.map(s => <StatCard key={s.label} {...s} />)}
       </div>
-    </div>
+    </section>
   )
 }
