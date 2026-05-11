@@ -19,7 +19,7 @@
 
 **$4.2 billion** was lost to DeFi exploits, wallet drainers, and phishing attacks in 2024 alone.
 
-The data to prevent these attacks exists on-chain — but 99% of users cannot read raw blockchain logs or identify malicious program signatures. When a wallet asks you to “sign this transaction”, most users have no idea what they’re actually approving.
+The data to prevent these attacks exists on-chain — but 99% of users cannot read raw blockchain logs or identify malicious program signatures. When a wallet asks you to "sign this transaction", most users have no idea what they're actually approving.
 
 ---
 
@@ -34,6 +34,9 @@ The data to prevent these attacks exists on-chain — but 99% of users cannot re
 - 📡 **Live Threat Feed** — real-time Solana mainnet threat monitoring
 - 🔬 **Program Scanner** — verify any Solana smart contract before interacting
 - 💬 **AI Chat** — ask follow-up questions in plain English after any scan
+- 🌧️ **Matrix Terminal UI** — immersive animated security dashboard
+- ⚡ **MEV Attack Detector** — identifies front-running and sandwich attacks
+- 🔎 **Address Intelligence Registry** — known malicious address lookup
 
 ---
 
@@ -41,19 +44,20 @@ The data to prevent these attacks exists on-chain — but 99% of users cannot re
 
 ```
 ┌────────────────────────────────────────────┐
-│            USER / WALLET / dAPP                  │
-│   Paste tx signature, wallet address, program ID  │
+│            USER / WALLET / dAPP            │
+│   Paste tx signature, wallet address,      │
+│   or program ID                            │
 └────────────────────────────────────────────┘
                         │
          ┌────────────┤ 4 API Routes ├────────────┐
-         │      │            │            │      │
+         │      │            │            │        │
     /api/analyze  /api/wallet  /api/program  /api/threat
     (Tx Scanner)  -profile     -scan         -feed
     (Gemini AI)   (Gemini AI)  (Gemini AI)   (RPC Fetch)
-         │      │            │            │      │
-         └──────┴────────────┴────────────┴──────┘
+         │      │            │            │        │
+         └──────┴────────────┴────────────┴────────┘
                         │
-              Helius RPC + Gemini 1.5 Flash
+              Helius Enhanced API + Gemini 1.5 Flash
               (Solana Mainnet Real-time Data)
 ```
 
@@ -66,12 +70,15 @@ The data to prevent these attacks exists on-chain — but 99% of users cannot re
 | 🔍 Real-time transaction scanner | ✅ Live |
 | 🤖 Gemini 1.5 Flash AI analysis | ✅ Live |
 | 👛 Wallet behavioral profiler | ✅ Live |
-| 📡 Live threat feed | ✅ Live |
+| 📡 Live threat pulse feed (3.5s updates) | ✅ Live |
 | 🔬 Program / dApp scanner | ✅ Live |
 | 💬 AI chat (ask follow-up questions) | ✅ Live |
 | ⚠️ 7 threat categories detection | ✅ Live |
+| 🌧️ Matrix Rain terminal background | ✅ Live |
+| ⚡ MEV attack detector | ✅ Live |
+| 🔎 Address Intelligence Registry | ✅ Live |
+| 🟢 System health dashboard | ✅ Live |
 | 📤 Share scan results | ✅ Live |
-| 📈 Count-up animated stats bar | ✅ Live |
 | 📱 Mobile responsive | ✅ Live |
 | 🔓 No wallet connection required | ✅ Live |
 | 📂 Open source MIT | ✅ Live |
@@ -85,7 +92,7 @@ The data to prevent these attacks exists on-chain — but 99% of users cannot re
 | Frontend | Next.js 14 App Router + TypeScript |
 | Styling | Tailwind CSS + inline styles |
 | AI Engine | Google Gemini 1.5 Flash |
-| Blockchain RPC | Helius (Solana mainnet) |
+| Blockchain RPC | Helius Enhanced API (Solana mainnet) |
 | Deployment | Vercel Edge Network |
 | License | MIT |
 
@@ -125,10 +132,10 @@ NEXT_PUBLIC_HELIUS_RPC=https://mainnet.helius-rpc.com/?api-key=your_helius_api_k
 
 | Criterion | AI-Sentinel Score |
 |---|---|
-| **Functionality** | 4 fully wired API routes. Gemini + Helius live. Rule-based fallback ensures 100% uptime. <2s per scan. |
+| **Functionality** | 4 fully wired API routes. Gemini + Helius Enhanced live. Rule-based fallback ensures 100% uptime. <2s per scan. |
 | **Potential Impact** | $4.2B problem. 500M+ potential users. Every Solana wallet user is a customer. |
-| **Novelty** | First open-source LLM-powered transaction firewall + wallet profiler on Solana. |
-| **UX** | Plain-English verdicts. AI chat. Tab navigation. Share button. No login required. |
+| **Novelty** | First open-source LLM-powered transaction firewall + wallet profiler on Solana with MEV detection. |
+| **UX** | Plain-English verdicts. AI chat. Matrix terminal UI. Tab navigation. Share button. No login required. |
 | **Open Source** | MIT. Composable — any dApp can call `/api/analyze` directly. |
 | **Business Plan** | 3-tier pricing (Free / Pro $29 / Enterprise Custom). Real TAM stats. |
 
@@ -137,9 +144,9 @@ NEXT_PUBLIC_HELIUS_RPC=https://mainnet.helius-rpc.com/?api-key=your_helius_api_k
 ## 💼 Business Model
 
 ```
-Free     — $0/mo   : 50 tx scans/day, wallet profiler, program scanner
-Pro      — $29/mo  : Unlimited scans, API access, real-time alerts
-Enterprise — Custom : White-label SDK, custom threat models, SLA, on-premise
+Free       — $0/mo   : 50 tx scans/day, wallet profiler, program scanner
+Pro        — $29/mo  : Unlimited scans, API access, real-time alerts
+Enterprise — Custom  : White-label SDK, custom threat models, SLA, on-premise
 ```
 
 **TAM:** 500M+ users · $4.2B lost in 2024 · 0 consumer-friendly AI scanners on Solana today
@@ -151,12 +158,12 @@ Enterprise — Custom : White-label SDK, custom threat models, SLA, on-premise
 | Name | Role |
 |---|---|
 | Gopichand Challa | Lead Engineer (AI + Solana) |
-| Kaviya | Frontend + UX |
-| Kalisetty | Backend + DevOps |
 
 ---
 
 **🌐 Live:** [https://ai-sentinel-three.vercel.app](https://ai-sentinel-three.vercel.app)  
 **📂 Repo:** [https://github.com/gopichandchalla16/AI-Sentinel](https://github.com/gopichandchalla16/AI-Sentinel)  
 **📜 License:** MIT  
-**🏆 Hackathon:** [Colosseum Frontier 2026](https://colosseum.org/frontier)
+**🏆 Hackathon:** [Colosseum Frontier 2026](https://colosseum.org/frontier)  
+
+<!-- v4: Matrix UI · MEV Detector · Live Threat Pulse · Address Intelligence · TS fix da69eeb -->
