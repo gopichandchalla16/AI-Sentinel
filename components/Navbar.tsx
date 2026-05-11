@@ -1,56 +1,60 @@
 "use client"
-
+import { useState, useEffect } from 'react'
 export default function Navbar() {
+  const [scrolled, setScrolled] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', onScroll)
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
   const scrollTo = (id: string) => {
+    setMobileOpen(false)
     const el = document.getElementById(id)
     if (el) el.scrollIntoView({ behavior: 'smooth' })
   }
-
+  const navLinks = [
+    { label: 'Scanner', id: 'tab-container' },
+    { label: 'Wallet Profiler', id: 'tab-container' },
+    { label: 'Threat Feed', id: 'tab-container' },
+    { label: 'Programs', id: 'tab-container' },
+    { label: 'How It Works', id: 'how-it-works' },
+  ]
   return (
-    <nav className="sticky top-0 z-50 border-b border-[#1e1e2e] backdrop-blur-md" style={{ backgroundColor: 'rgba(10,10,15,0.85)' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14">
-          <div className="flex items-center gap-3">
-            <span className="text-xl font-bold" style={{ background: 'linear-gradient(135deg, #9945FF, #14F195)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              🛡️ AI-Sentinel
-            </span>
-            <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border border-[#14F195]/30" style={{ color: '#14F195', backgroundColor: 'rgba(20,241,149,0.08)' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#14F195] animate-pulse inline-block" />
-              LIVE
-            </span>
-          </div>
-          <div className="hidden md:flex items-center gap-1">
-            {[
-              { label: 'Scanner', id: 'tabs' },
-              { label: 'Wallet', id: 'tabs' },
-              { label: 'Threat Feed', id: 'tabs' },
-              { label: 'Programs', id: 'tabs' },
-            ].map((item) => (
-              <button
-                key={item.label}
-                onClick={() => scrollTo(item.id)}
-                className="px-3 py-1.5 text-sm rounded-lg transition-colors"
-                style={{ color: '#94A3B8' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#F8FAFC')}
-                onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}
-              >
-                {item.label}
-              </button>
-            ))}
-            <a
-              href="https://github.com/gopichandchalla16/AI-Sentinel"
-              target="_blank"
-              rel="noreferrer"
-              className="ml-2 px-3 py-1.5 text-sm rounded-lg border border-[#1e1e2e] transition-colors"
-              style={{ color: '#94A3B8' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#9945FF'; e.currentTarget.style.borderColor = '#9945FF' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.borderColor = '#1e1e2e' }}
-            >
-              GitHub ↗
-            </a>
+    <div style={{position:'sticky',top:0,zIndex:50}}>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
+      <nav style={scrolled?{backgroundColor:'rgba(10,10,15,0.85)',backdropFilter:'blur(20px)',borderBottom:'1px solid #1e1e2e',boxShadow:'0 4px 24px rgba(0,0,0,0.4)',padding:'0 24px',display:'flex',alignItems:'center',justifyContent:'space-between',height:64}:{backgroundColor:'transparent',padding:'0 24px',display:'flex',alignItems:'center',justifyContent:'space-between',height:64}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:22,fontWeight:800}}>
+            <span style={{color:'#9945FF'}}>AI</span>
+            <span style={{color:'#F8FAFC'}}>-Sentinel</span>
+          </span>
+          <div style={{display:'inline-flex',alignItems:'center',gap:4,marginLeft:8,padding:'2px 8px',borderRadius:9999,background:'rgba(20,241,149,0.1)',border:'1px solid rgba(20,241,149,0.3)'}}>
+            <div style={{width:6,height:6,borderRadius:'50%',background:'#14F195',animation:'pulse 2s infinite'}} />
+            <span style={{fontSize:11,color:'#14F195',fontWeight:600}}>LIVE</span>
           </div>
         </div>
-      </div>
-    </nav>
+        <div style={{display:'flex',gap:28,alignItems:'center'}} className="hidden md:flex">
+          {navLinks.map(l=>(
+            <button key={l.label} onClick={()=>scrollTo(l.id)} style={{color:'#94A3B8',fontSize:14,fontWeight:500,cursor:'pointer',background:'none',border:'none',transition:'color 0.2s'}} onMouseEnter={e=>(e.currentTarget.style.color='#F8FAFC')} onMouseLeave={e=>(e.currentTarget.style.color='#94A3B8')}>{l.label}</button>
+          ))}
+          <a href="https://github.com/gopichandchalla16/AI-Sentinel" target="_blank" rel="noopener noreferrer" style={{color:'#94A3B8',fontSize:14,fontWeight:500,textDecoration:'none',transition:'color 0.2s'}} onMouseEnter={e=>(e.currentTarget.style.color='#F8FAFC')} onMouseLeave={e=>(e.currentTarget.style.color='#94A3B8')}>GitHub ↗</a>
+        </div>
+        <div style={{display:'flex',gap:12,alignItems:'center'}}>
+          <button onClick={()=>scrollTo('tab-container')} style={{padding:'8px 20px',borderRadius:10,fontWeight:600,fontSize:14,background:'linear-gradient(135deg,#9945FF,#14F195)',color:'#0a0a0f',border:'none',cursor:'pointer'}}>Try Free →</button>
+          <button onClick={()=>setMobileOpen(p=>!p)} style={{display:'flex',flexDirection:'column',gap:5,background:'none',border:'none',cursor:'pointer',padding:4}} aria-label="Menu">
+            {[0,1,2].map(i=>(<div key={i} style={{width:22,height:2,background:'#94A3B8',borderRadius:2}} />))}
+          </button>
+        </div>
+      </nav>
+      {mobileOpen && (
+        <div style={{background:'#111118',borderBottom:'1px solid #1e1e2e',padding:'12px 24px',display:'flex',flexDirection:'column',gap:4}}>
+          {navLinks.map(l=>(
+            <button key={l.label} onClick={()=>scrollTo(l.id)} style={{color:'#94A3B8',fontSize:15,fontWeight:500,cursor:'pointer',background:'none',border:'none',textAlign:'left',padding:'10px 0',borderBottom:'1px solid #1e1e2e'}}>{l.label}</button>
+          ))}
+          <a href="https://github.com/gopichandchalla16/AI-Sentinel" target="_blank" rel="noopener noreferrer" style={{color:'#94A3B8',fontSize:15,padding:'10px 0',textDecoration:'none'}}>GitHub ↗</a>
+        </div>
+      )}
+    </div>
   )
 }
