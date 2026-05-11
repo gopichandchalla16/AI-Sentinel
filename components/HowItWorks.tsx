@@ -1,69 +1,56 @@
-export default function HowItWorks() {
-  const steps = [
-    {
-      n: '01',
-      title: 'Paste Signature',
-      desc: 'Copy any Solana transaction signature from Solscan or your wallet history.',
-      icon: '📋',
-      color: '#9945FF',
-    },
-    {
-      n: '02',
-      title: 'Live RPC Fetch',
-      desc: 'AI-Sentinel calls Helius RPC to get real-time tx data, account balances, and wallet history.',
-      icon: '⚡',
-      color: '#14F195',
-    },
-    {
-      n: '03',
-      title: 'Gemini AI Analysis',
-      desc: 'Google Gemini 1.5 Flash analyses 7 security parameters and generates a structured risk verdict.',
-      icon: '🤖',
-      color: '#9945FF',
-    },
-    {
-      n: '04',
-      title: 'Instant Verdict',
-      desc: 'You get a risk score, specific red flags, a plain-English summary, and a clear recommendation in under 2 seconds.',
-      icon: '🛡️',
-      color: '#14F195',
-    },
-  ]
+'use client';
 
+const STEPS = [
+  {
+    icon: '📋',
+    num: '01',
+    title: 'Paste Signature',
+    body: 'Copy any Solana transaction hash from your wallet, Solscan, or explorer. Paste it into the scanner.',
+  },
+  {
+    icon: '🤖',
+    num: '02',
+    title: 'AI Simulates',
+    body: 'We fetch live on-chain state via Helius RPC and run multi-layer LLM threat modeling with Gemini 1.5 Flash.',
+  },
+  {
+    icon: '🛡️',
+    num: '03',
+    title: 'Get Verdict',
+    body: 'Receive a 0–100 risk score, human-readable explanation, specific red flags, and a clear DO / DON\'T SIGN decision.',
+  },
+];
+
+export default function HowItWorks() {
   return (
-    <section className="relative z-10 max-w-3xl mx-auto px-4 py-14">
-      <div className="text-center mb-10">
-        <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">How It Works</h2>
-        <p className="text-sm text-[#555] mono">4 steps · under 2 seconds · no wallet needed</p>
+    <section id="how" className="max-w-5xl mx-auto px-4 py-16">
+      <div className="text-center mb-12">
+        <p className="text-xs font-mono font-bold text-[#9945FF] tracking-widest mb-3">HOW IT WORKS</p>
+        <h2 className="text-3xl md:text-4xl font-black tracking-tight">Three steps to security</h2>
       </div>
 
-      <div className="relative">
-        {/* Connecting line */}
-        <div className="absolute left-[22px] top-8 bottom-8 w-px hidden sm:block" style={{ background: 'linear-gradient(to bottom, #9945FF44, #14F19544)' }} />
-
-        <div className="space-y-4">
-          {steps.map((step) => (
-            <div key={step.n} className="flex gap-5 items-start group">
+      <div className="grid md:grid-cols-3 gap-6">
+        {STEPS.map((step, i) => (
+          <div key={step.num} className="relative">
+            <div className="bg-[#111118] border border-[#1e1e2e] rounded-2xl p-6 h-full hover:border-[#9945FF]/40 transition-colors">
               <div
-                className="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-lg relative z-10 transition-all duration-300 group-hover:scale-110"
-                style={{ background: `${step.color}12`, border: `1px solid ${step.color}30` }}
+                className="text-6xl font-black font-mono mb-4"
+                style={{ color: 'rgba(153,69,255,0.15)' }}
               >
-                {step.icon}
+                {step.num}
               </div>
-              <div
-                className="flex-1 p-4 rounded-xl transition-all duration-300 group-hover:border-[#2a2a2a]"
-                style={{ background: '#0f0f0f', border: '1px solid #1a1a1a' }}
-              >
-                <div className="flex items-center gap-2.5 mb-1.5">
-                  <span className="text-[10px] mono font-bold" style={{ color: step.color }}>{step.n}</span>
-                  <span className="text-sm font-semibold text-white">{step.title}</span>
-                </div>
-                <p className="text-xs text-[#666] leading-relaxed">{step.desc}</p>
-              </div>
+              <div className="text-3xl mb-3">{step.icon}</div>
+              <h3 className="text-lg font-bold text-[#F8FAFC] mb-2">{step.title}</h3>
+              <p className="text-sm text-[#94A3B8] leading-relaxed">{step.body}</p>
             </div>
-          ))}
-        </div>
+            {i < STEPS.length - 1 && (
+              <div className="hidden md:flex absolute top-1/2 -right-3 -translate-y-1/2 z-10 text-[#9945FF] text-xl font-bold">
+                →
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </section>
-  )
+  );
 }

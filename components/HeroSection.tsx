@@ -1,130 +1,161 @@
-'use client'
-import { useEffect, useState } from 'react'
-
-const THREAT_TICKERS = [
-  { label: 'Wallet Drainer', risk: 'CRITICAL', color: '#FF3232' },
-  { label: 'Unknown Destination', risk: 'HIGH', color: '#FF6B35' },
-  { label: 'Jupiter Swap', risk: 'LOW', color: '#14F195' },
-  { label: 'Token Approval', risk: 'MEDIUM', color: '#FFC107' },
-  { label: 'NFT Purchase', risk: 'LOW', color: '#14F195' },
-  { label: 'Phishing Contract', risk: 'CRITICAL', color: '#FF3232' },
-]
+'use client';
 
 export default function HeroSection() {
-  const [tickerIdx, setTickerIdx] = useState(0)
-  const [counter, setCounter] = useState({ scans: 14823, threats: 2341 })
-
-  useEffect(() => {
-    const t = setInterval(() => setTickerIdx(i => (i + 1) % THREAT_TICKERS.length), 2200)
-    return () => clearInterval(t)
-  }, [])
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setCounter(c => ({ scans: c.scans + Math.floor(Math.random() * 3), threats: c.threats }))
-    }, 3500)
-    return () => clearInterval(t)
-  }, [])
-
-  const current = THREAT_TICKERS[tickerIdx]
-
   return (
-    <section className="relative z-10 text-center pt-16 pb-8 px-4 overflow-hidden">
-      {/* Top ambient glow */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 60% 40% at 50% 0%, rgba(153,69,255,0.08) 0%, transparent 70%)' }} />
-
-      {/* Hackathon badge */}
+    <section className="relative overflow-hidden">
+      {/* Background glow */}
       <div
-        className="inline-flex items-center gap-2 mb-5 px-4 py-1.5 rounded-full border text-xs mono"
-        style={{ borderColor: 'rgba(153,69,255,0.3)', background: 'rgba(153,69,255,0.07)', color: '#c084fc' }}
-      >
-        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-        Colosseum Frontier Hackathon 2026 · AI Platforms / Agents
-      </div>
+        style={{
+          position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+          width: 800, height: 400,
+          background: 'radial-gradient(ellipse, rgba(153,69,255,0.15) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }}
+      />
 
-      {/* Main heading */}
-      <h1 className="text-[2.4rem] sm:text-[3.2rem] font-extrabold leading-[1.1] tracking-tight mb-4">
-        <span className="text-white">Know What You&apos;re Signing.</span>
-        <br />
-        <span className="gradient-text">Before You Sign It.</span>
-      </h1>
-
-      <p className="text-[#777] text-base sm:text-lg max-w-xl mx-auto leading-relaxed mb-6">
-        AI-Sentinel fetches live Solana on-chain data and runs it through{' '}
-        <span className="text-white font-medium">Google Gemini AI</span> — giving you
-        a plain-English risk verdict in under 2 seconds.
-      </p>
-
-      {/* Live threat ticker */}
-      <div
-        className="inline-flex items-center gap-3 mb-7 px-4 py-2.5 rounded-xl border mono text-xs"
-        style={{ borderColor: '#1e1e1e', background: '#0d0d0d' }}
-      >
-        <span className="text-[#444]">Last analyzed:</span>
-        <span
-          className="font-semibold transition-all duration-500"
-          style={{ color: current.color }}
-          key={tickerIdx}
-        >
-          {current.label}
-        </span>
-        <span
-          className="px-2 py-0.5 rounded text-[10px] font-bold"
-          style={{ background: `${current.color}18`, color: current.color, border: `1px solid ${current.color}40` }}
-        >
-          {current.risk}
-        </span>
-      </div>
-
-      {/* Live stats */}
-      <div className="flex justify-center gap-6 mb-8">
-        <div className="text-center">
-          <div className="text-2xl font-bold mono" style={{ color: '#14F195' }}>{counter.scans.toLocaleString()}</div>
-          <div className="text-[11px] mono text-[#444] uppercase tracking-wider mt-0.5">Txns Scanned</div>
-        </div>
-        <div className="w-px" style={{ background: '#1e1e1e' }} />
-        <div className="text-center">
-          <div className="text-2xl font-bold mono" style={{ color: '#FF6B35' }}>{counter.threats.toLocaleString()}</div>
-          <div className="text-[11px] mono text-[#444] uppercase tracking-wider mt-0.5">Threats Caught</div>
-        </div>
-        <div className="w-px" style={{ background: '#1e1e1e' }} />
-        <div className="text-center">
-          <div className="text-2xl font-bold mono" style={{ color: '#9945FF' }}>&lt;2s</div>
-          <div className="text-[11px] mono text-[#444] uppercase tracking-wider mt-0.5">Avg Response</div>
-        </div>
-      </div>
-
-      {/* Feature pills */}
-      <div className="flex flex-wrap justify-center gap-2 mb-8">
-        {[
-          { icon: '🔗', text: 'Live Solana RPC', sub: 'Helius Mainnet' },
-          { icon: '🤖', text: 'Gemini 1.5 Flash', sub: 'Google AI' },
-          { icon: '👻', text: 'Phantom Connect', sub: 'Wallet SDK' },
-          { icon: '🛡️', text: '4 Risk Levels', sub: 'LOW → CRITICAL' },
-          { icon: '🔓', text: 'Open Source MIT', sub: 'GitHub' },
-        ].map(({ icon, text, sub }) => (
-          <div
-            key={text}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs mono"
-            style={{ background: '#0f0f0f', border: '1px solid #1e1e1e', color: '#666' }}
-          >
-            <span className="text-base">{icon}</span>
-            <div>
-              <div className="text-[#999]">{text}</div>
-              <div className="text-[10px] text-[#444]">{sub}</div>
-            </div>
+      <div className="relative max-w-5xl mx-auto px-4 pt-20 pb-16 text-center">
+        {/* Navbar */}
+        <nav className="flex items-center justify-between mb-16 max-w-4xl mx-auto">
+          <div className="flex items-center gap-2">
+            <ShieldIcon />
+            <span className="font-bold text-lg tracking-tight">AI-Sentinel</span>
           </div>
-        ))}
-      </div>
+          <div className="flex items-center gap-4">
+            <a
+              href="#scanner"
+              className="text-[#94A3B8] hover:text-white text-sm font-medium transition-colors"
+            >
+              Scanner
+            </a>
+            <a
+              href="#how"
+              className="text-[#94A3B8] hover:text-white text-sm font-medium transition-colors"
+            >
+              How It Works
+            </a>
+            <a
+              href="https://github.com/gopichandchalla16/AI-Sentinel"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#111118] border border-[#1e1e2e] rounded-lg text-sm font-medium hover:border-[#9945FF] transition-colors"
+            >
+              ⭐ GitHub
+            </a>
+          </div>
+        </nav>
 
-      {/* CTA */}
-      <a
-        href="#scan"
-        className="inline-flex items-center gap-2 text-sm text-[#444] hover:text-purple-400 transition-colors mono"
-      >
-        <span>Paste a tx signature below to scan</span>
-        <span className="animate-bounce">↓</span>
-      </a>
+        {/* Live badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#111118] border border-[#1e1e2e] rounded-full mb-8">
+          <span
+            style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: '#14F195',
+              boxShadow: '0 0 8px #14F195',
+              display: 'inline-block',
+              animation: 'pulse 2s ease-in-out infinite',
+            }}
+          />
+          <span className="text-xs font-mono text-[#14F195] font-semibold tracking-widest">
+            LIVE · SOLANA MAINNET · COLOSSEUM FRONTIER 2026
+          </span>
+        </div>
+
+        {/* Shield icon */}
+        <div className="flex justify-center mb-8">
+          <ShieldLarge />
+        </div>
+
+        {/* Headline */}
+        <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-4 leading-tight">
+          <span
+            style={{
+              background: 'linear-gradient(135deg, #9945FF 0%, #14F195 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            AI-Sentinel
+          </span>
+        </h1>
+
+        <h2 className="text-xl md:text-2xl text-[#94A3B8] font-semibold mb-6">
+          Solana&apos;s First Agentic Transaction Firewall
+        </h2>
+
+        <p className="text-[#94A3B8] text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-10">
+          Paste any Solana transaction signature. Our AI agent fetches on-chain data,
+          simulates the outcome, and delivers a security verdict in under 2 seconds.
+          Built for the next billion DeFi users.
+        </p>
+
+        {/* Badges */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
+          {[
+            { icon: '🔴', label: 'Real-time Analysis' },
+            { icon: '🤖', label: 'LLM-Powered' },
+            { icon: '⚡', label: '< 2 Seconds' },
+            { icon: '🔓', label: 'Open Source MIT' },
+          ].map((b) => (
+            <span
+              key={b.label}
+              className="flex items-center gap-2 px-4 py-2 bg-[#111118] border border-[#1e1e2e] rounded-full text-sm font-medium text-[#94A3B8]"
+            >
+              <span>{b.icon}</span>
+              <span>{b.label}</span>
+            </span>
+          ))}
+        </div>
+
+        <a
+          href="#scanner"
+          style={{
+            display: 'inline-block',
+            background: 'linear-gradient(135deg, #9945FF, #14F195)',
+            color: '#000',
+            fontWeight: 800,
+            fontSize: '1rem',
+            padding: '14px 32px',
+            borderRadius: 14,
+            textDecoration: 'none',
+          }}
+        >
+          🛡️ Analyze a Transaction — Free
+        </a>
+      </div>
     </section>
-  )
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+      <path
+        d="M16 3L28 9V17C28 23.5 22.5 29.5 16 31C9.5 29.5 4 23.5 4 17V9Z"
+        stroke="#9945FF" strokeWidth="1.8" fill="rgba(153,69,255,0.1)"
+      />
+      <path
+        d="M10.5 16L14.5 20L21.5 13"
+        stroke="#14F195" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ShieldLarge() {
+  return (
+    <svg
+      width="90" height="90" viewBox="0 0 32 32" fill="none"
+      style={{ filter: 'drop-shadow(0 0 18px rgba(153,69,255,0.5))', animation: 'pulse 2.5s ease-in-out infinite' }}
+    >
+      <path
+        d="M16 3L28 9V17C28 23.5 22.5 29.5 16 31C9.5 29.5 4 23.5 4 17V9Z"
+        stroke="#9945FF" strokeWidth="1.4" fill="rgba(153,69,255,0.08)"
+      />
+      <path
+        d="M10.5 16L14.5 20L21.5 13"
+        stroke="#14F195" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+      />
+    </svg>
+  );
 }

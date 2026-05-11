@@ -3,28 +3,18 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'AI-Sentinel | Solana Transaction Firewall',
-  description: 'AI-Sentinel is an autonomous agentic security firewall for Solana. Paste any transaction signature and get an instant AI risk verdict. Built for Colosseum Frontier Hackathon 2026.',
-  keywords: ['Solana', 'blockchain security', 'transaction scanner', 'AI', 'DeFi safety', 'wallet protection', 'phishing', 'drainer detection'],
+  description: 'Paste any Solana transaction signature and get an AI security verdict in under 2 seconds. Detect drainers, phishing, and malicious programs before you sign.',
+  keywords: ['Solana', 'blockchain security', 'transaction scanner', 'DeFi safety', 'AI', 'Colosseum Hackathon'],
   openGraph: {
     title: 'AI-Sentinel | Solana Transaction Firewall',
-    description: 'Paste any Solana transaction signature. Get an AI security verdict in under 2 seconds.',
-    url: 'https://ai-sentinel.vercel.app',
-    siteName: 'AI-Sentinel',
+    description: 'AI-powered Solana transaction security. Know what you sign.',
     type: 'website',
   },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'AI-Sentinel',
-    description: 'AI-powered Solana transaction security firewall.',
-    creator: '@GopichandAI',
-  },
-  robots: 'index, follow',
-  themeColor: '#0a0a0f',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -33,8 +23,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#0a0a0f" />
       </head>
-      <body style={{ margin: 0, padding: 0, background: '#0a0a0f', color: '#e2e8f0', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <body className="bg-[#0a0a0f] text-[#F8FAFC] min-h-screen">
         {children}
       </body>
     </html>
