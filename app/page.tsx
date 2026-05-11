@@ -5,16 +5,18 @@ import LiveThreatFeed from '../components/LiveThreatFeed';
 import ScannerPanel from '../components/ScannerPanel';
 import MEVDetector from '../components/MEVDetector';
 import AddressIntelligence from '../components/AddressIntelligence';
+import WalletProfiler from '../components/WalletProfiler';
 import Web3Explainer from '../components/Web3Explainer';
 import HowItWorks from '../components/HowItWorks';
 import BusinessModel from '../components/BusinessModel';
 import Footer from '../components/Footer';
+import AnimatedBackground from '../components/AnimatedBackground';
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#0a0a0f] relative overflow-x-hidden">
-      {/* Background glows */}
-      <canvas style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, opacity: 0.18, pointerEvents: 'none' }} />
+      {/* Matrix rain background */}
+      <AnimatedBackground />
       <div style={{ position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)', width: 900, height: 500, background: 'radial-gradient(ellipse, rgba(153,69,255,0.12) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 1 }} />
       <div style={{ position: 'fixed', bottom: 0, right: 0, width: 600, height: 400, background: 'radial-gradient(ellipse, rgba(20,241,149,0.06) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 1 }} />
 
@@ -22,10 +24,7 @@ export default function Home() {
         <Navbar />
         <div style={{ paddingTop: 60 }}>
 
-          {/* Hero */}
           <HeroSection />
-
-          {/* Animated Stats */}
           <StatsBar />
 
           {/* Live Threat Feed */}
@@ -33,7 +32,7 @@ export default function Home() {
             <LiveThreatFeed />
           </div>
 
-          {/* Main Scanner — id="scanner" for CTA scroll */}
+          {/* Main Scanner */}
           <div id="scanner" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px 32px', scrollMarginTop: 72 }}>
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
               <span style={{
@@ -51,25 +50,31 @@ export default function Home() {
 
           {/* MEV + Address Intel grid */}
           <div id="mev" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px 32px' }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
-              gap: 20,
-            }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 20 }}>
               <MEVDetector />
               <div id="address"><AddressIntelligence /></div>
             </div>
           </div>
 
-          {/* Web3 Explainer for Indian beginners */}
+          {/* Wallet Profiler — full width */}
+          <div id="wallet" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px 32px', scrollMarginTop: 72 }}>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '6px 20px', background: 'rgba(20,241,149,0.08)',
+                border: '1px solid rgba(20,241,149,0.3)', borderRadius: 30,
+                color: '#14F195', fontSize: 13, fontWeight: 700, letterSpacing: 1,
+              }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#14F195', display: 'inline-block' }} />
+                WALLET RISK PROFILER
+              </span>
+            </div>
+            <WalletProfiler />
+          </div>
+
           <Web3Explainer />
-
-          {/* How It Works */}
           <div id="how"><HowItWorks /></div>
-
-          {/* Business Model / Pricing */}
           <div id="business"><BusinessModel /></div>
-
           <Footer />
         </div>
       </div>
