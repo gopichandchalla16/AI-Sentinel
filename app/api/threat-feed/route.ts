@@ -7,25 +7,41 @@ function quickRiskScore(tx: any): { score: number; threatType: string } {
 
   try {
     const accountCount = tx.transaction?.message?.accountKeys?.length || 0
-    if (accountCount > 15) { score += 25; threatType = 'Multi-account Operation' }
+    if (accountCount > 15) {
+      score += 25
+      threatType = 'Multi-account Operation'
+    }
 
     const pre = tx.meta?.preBalances?.[0] || 0
     const post = tx.meta?.postBalances?.[0] || 0
     const solChange = Math.abs(post - pre)
-    if (solChange > 1e10) { score += 30; threatType = 'Large SOL Movement' }
+    if (solChange > 1e10) {
+      score += 30
+      threatType = 'Large SOL Movement'
+    }
 
-    if (tx.meta?.err) { score += 15; threatType = 'Failed Suspicious Tx' }
+    if (tx.meta?.err) {
+      score += 15
+      threatType = 'Failed Suspicious Tx'
+    }
 
-    const logs = (tx.meta?.logMessages || []).join(' ')
-    if (logs.includes('SetAuthority')) { score += 40; threatType = 'Authority Transfer' }
-    else if (logs.includes('Approve')) { score += 20; threatType = 'Token Approval' }
-    else if (logs.includes('Transfer') && solChange > 5e9) { score += 20; threatType = 'Large Transfer' }
+    const logs: string = (tx.meta?.logMessages || []).join(' ')
+    if (logs.includes('SetAuthority')) {
+      score += 40
+      threatType = 'Authority Transfer'
+    } else if (logs.includes('Approve')) {
+      score += 20
+      threatType = 'Token Approval'
+    } else if (logs.includes('Transfer') && solChange > 5e9) {
+      score += 20
+      threatType = 'Large Transfer'
+    }
   } catch {}
 
   return { score: Math.min(score, 95), threatType }
 }
 
-function verdictFromScore(score: number) {
+function verdictFromScore(score: number): string {
   if (score >= 70) return 'HIGH RISK'
   if (score >= 40) return 'CAUTION'
   return 'SAFE'
@@ -39,7 +55,12 @@ export async function GET() {
     const sigsRes = await fetch(HELIUS_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getSignaturesForAddress', params: [TOKEN_PROGRAM, { limit: 5 }] }),
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'getSignaturesForAddress',
+        params: [TOKEN_PROGRAM, { limit: 5 }],
+      }),
     })
     const sigsData = await sigsRes.json()
     const signatures = sigsData.result || []
@@ -50,7 +71,15 @@ export async function GET() {
         const txRes = await fetch(HELIUS_RPC, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTransaction', params: [sigInfo.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }] }),
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'getTransaction',
+            params: [
+              sigInfo.signature,
+              { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 },
+            ],
+          }),
         })
         const txData = await txRes.json()
         const tx = txData.result
@@ -59,12 +88,14 @@ export async function GET() {
         const { score, threatType } = quickRiskScore(tx)
         if (score < 15) continue
 
-        const sig = sigInfo.signature
+        const sig: string = sigInfo.signature
         threats.push({
           id: sig.slice(0, 12),
           signature: sig,
           shortSig: sig.slice(0, 8) + '...' + sig.slice(-8),
-          timestamp: new Date((sigInfo.blockTime || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+          timestamp: new Date(
+            (sigInfo.blockTime || Math.floor(Date.now() / 1000)) * 1000
+          ).toISOString(),
           riskScore: score,
           verdict: verdictFromScore(score),
           threatType,
@@ -76,7 +107,7 @@ export async function GET() {
     }
 
     return Response.json({ threats, timestamp: new Date().toISOString() })
-  } catch (e) {
+  } catch {
     return Response.json({ threats: [], timestamp: new Date().toISOString() })
   }
 }

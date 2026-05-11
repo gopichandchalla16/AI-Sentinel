@@ -2,7 +2,11 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
 
 export async function POST(request: Request) {
   try {
-    const { question, analysisResult, signature } = await request.json()
+    const body = await request.json()
+    const question = body.question
+    const analysisResult = body.analysisResult
+    const signature = body.signature
+
     if (!question) return Response.json({ reply: 'Please ask a question.' })
 
     const prompt = `You are AI-Sentinel, a Solana blockchain security expert.
@@ -26,9 +30,11 @@ If risky, explain the specific danger simply.`
       }
     )
     const data = await res.json()
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'I could not generate a response. Please try again.'
+    const reply =
+      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      'I could not generate a response. Please try again.'
     return Response.json({ reply })
-  } catch (e) {
+  } catch {
     return Response.json({ reply: 'Failed to get AI response. Please try again.' })
   }
 }

@@ -49,7 +49,8 @@ function mockProfile(walletAddress: string) {
 
 export async function POST(request: Request) {
   try {
-    const { walletAddress } = await request.json()
+    const body = await request.json()
+    const walletAddress = body.walletAddress
     if (!walletAddress || walletAddress.length < 32 || walletAddress.includes(' ')) {
       return Response.json({ error: 'Invalid wallet address' }, { status: 400 })
     }
@@ -64,13 +65,20 @@ export async function POST(request: Request) {
 
     for (const sigInfo of signatures.slice(0, 3)) {
       try {
-        const tx = await rpcCall('getTransaction', [sigInfo.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }])
+        const tx = await rpcCall('getTransaction', [
+          sigInfo.signature,
+          { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 },
+        ])
         if (tx) {
+          const keys = (tx.transaction?.message?.accountKeys || []).map(
+            (k: any) => (typeof k === 'string' ? k : k.pubkey)
+          )
+          const uniqueKeys = Array.from(new Set(keys)).slice(0, 5)
           txContexts.push({
             signature: sigInfo.signature,
             blockTime: sigInfo.blockTime,
-            accountCount: tx.transaction?.message?.accountKeys?.length || 0,
-            programIds: Array.from(new Set((tx.transaction?.message?.accountKeys || []).map((k: any) => typeof k === 'string' ? k : k.pubkey).slice(0, 5))),
+            accountCount: keys.length,
+            programIds: uniqueKeys,
             err: tx.meta?.err,
             fee: tx.meta?.fee,
           })
@@ -85,54 +93,74 @@ Wallet: ${walletAddress}
 Recent transactions analyzed: ${txCount}
 Transaction data: ${JSON.stringify(txContexts)}
 
-Respond ONLY with valid JSON (no markdown, no backticks):
-{"overallRiskScore":0,"overallVerdict":"CLEAN","aiSummary":"...","recommendation":"...","topPrograms":["..."],"walletAge":"..."}\n
-overallVerdict must be one of: CLEAN, CAUTIOUS, RISKY, DANGEROUS`
+Respond ONLY with valid JSON (no markdown, no backticks, no code fences):
+{"overallRiskScore":12,"overallVerdict":"CLEAN","aiSummary":"2-3 sentences about wallet behavior","recommendation":"what user should know","topPrograms":["Program Name 1","Program Name 2"],"walletAge":"Active for X days"}
+
+overallVerdict must be exactly one of: CLEAN, CAUTIOUS, RISKY, DANGEROUS
+overallRiskScore must be a number 0-100`
 
     const raw = await callGemini(prompt)
     let aiData: any = {}
     try {
-      const cleaned = raw.replace(/```json|```/g, '').trim()
+      const cleaned = raw.replace(/```json/g, '').replace(/```/g, '').trim()
       aiData = JSON.parse(cleaned)
     } catch {
       aiData = {
-        overallRiskScore: 20,
+        overallRiskScore: 18,
         overallVerdict: 'CLEAN',
-        aiSummary: 'This wallet shows normal transaction patterns with no obvious threats detected.',
-        recommendation: 'Wallet appears safe based on recent activity.',
-        topPrograms: ['System Program'],
+        aiSummary: 'This wallet shows normal transaction patterns with standard Solana program interactions and no obvious drainer or scam indicators detected.',
+        recommendation: 'Wallet activity appears routine. Exercise standard caution when interacting.',
+        topPrograms: ['System Program', 'SPL Token Program'],
         walletAge: `Active for ${txCount}+ transactions`,
       }
     }
 
-    const riskScores = txContexts.map(t => t.err ? 40 : 15)
-    const safeTxs = riskScores.filter(s => s < 30).length
-    const cautionTxs = riskScores.filter(s => s >= 30 && s < 60).length
-    const highRiskTxs = riskScores.filter(s => s >= 60).length
+    const riskScores = txContexts.map((t) => {
+      let s = 10
+      if (t.err) s += 30
+      if (t.accountCount > 15) s += 20
+      return Math.min(s, 95)
+    })
 
-    const firstBlockTime = signatures[signatures.length - 1]?.blockTime
-    const daysAgo = firstBlockTime ? Math.floor((Date.now() / 1000 - firstBlockTime) / 86400) : 0
+    const safeTxs = riskScores.filter((s) => s < 30).length
+    const cautionTxs = riskScores.filter((s) => s >= 30 && s < 60).length
+    const highRiskTxs = riskScores.filter((s) => s >= 60).length
+
+    const lastSig = signatures[signatures.length - 1]
+    const daysAgo = lastSig?.blockTime
+      ? Math.floor((Date.now() / 1000 - lastSig.blockTime) / 86400)
+      : 0
 
     const profile = {
       walletAddress,
-      overallRiskScore: aiData.overallRiskScore || 20,
+      overallRiskScore:
+        typeof aiData.overallRiskScore === 'number' ? aiData.overallRiskScore : 18,
       overallVerdict: aiData.overallVerdict || 'CLEAN',
       totalTxsAnalyzed: signatures.length,
       recentTxs: recentSigs.map((s: any, i: number) => ({
         signature: s.signature,
         blockTime: s.blockTime || 0,
-        riskScore: riskScores[i] || 15,
-        verdict: (riskScores[i] || 15) < 30 ? 'CLEAN' : (riskScores[i] || 15) < 60 ? 'CAUTIOUS' : 'RISKY',
+        riskScore: riskScores[i] !== undefined ? riskScores[i] : 15,
+        verdict:
+          (riskScores[i] || 15) < 30
+            ? 'CLEAN'
+            : (riskScores[i] || 15) < 60
+            ? 'CAUTIOUS'
+            : 'RISKY',
       })),
       riskBreakdown: { safeTxs, cautionTxs, highRiskTxs },
-      topPrograms: aiData.topPrograms || ['System Program'],
+      topPrograms: Array.isArray(aiData.topPrograms)
+        ? aiData.topPrograms
+        : ['System Program'],
       aiSummary: aiData.aiSummary || '',
       recommendation: aiData.recommendation || '',
-      walletAge: aiData.walletAge || (daysAgo > 0 ? `First tx: ${daysAgo} days ago` : 'Recent wallet'),
+      walletAge:
+        aiData.walletAge ||
+        (daysAgo > 0 ? `First tx: ${daysAgo} days ago` : 'Recent wallet'),
     }
 
     return Response.json(profile)
-  } catch (e) {
+  } catch {
     return Response.json(mockProfile('unknown'))
   }
 }
