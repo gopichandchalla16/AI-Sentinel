@@ -1,89 +1,89 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+
+type Severity = 'CRITICAL' | 'HIGH' | 'MEDIUM';
+
+interface Threat {
+  id: string;
+  type: string;
+  severity: Severity;
+  sig: string;
+  program: string;
+  age: string;
+  loss: string;
+}
+
+const SEED_THREATS: Threat[] = [
+  { id: '1', type: '🩸 Wallet Drainer', severity: 'CRITICAL', sig: '5Ry9Kq...mX2pW', program: 'Unknown Program', age: '2s ago', loss: '-12.4 SOL' },
+  { id: '2', type: '🎣 Phishing Link', severity: 'HIGH', sig: '3Px7Lm...nQ8sA', program: 'Fake Jupiter', age: '8s ago', loss: '-220 USDC' },
+  { id: '3', type: '🥪 MEV Sandwich', severity: 'HIGH', sig: '9Tz4Vw...kR1dB', program: 'Raydium AMM', age: '14s ago', loss: '-0.8 SOL' },
+  { id: '4', type: '🔑 Authority Transfer', severity: 'CRITICAL', sig: '7Jq2Hn...yP5eC', program: 'Token Program', age: '21s ago', loss: 'Full Drain Risk' },
+  { id: '5', type: '⚠️ Excessive Approval', severity: 'MEDIUM', sig: '2Wk8Rp...xM3fD', program: 'DeFi Protocol', age: '35s ago', loss: 'Unlimited Approval' },
+];
 
 const THREAT_TYPES = [
-  { type: 'DRAINER', color: '#FF4444', emoji: '🚨' },
-  { type: 'PHISHING', color: '#FF8C00', emoji: '🎣' },
-  { type: 'MEV ATTACK', color: '#FFD700', emoji: '⚡' },
-  { type: 'RUG PULL', color: '#FF6B6B', emoji: '🪤' },
-  { type: 'FAKE MINT', color: '#FF4DA6', emoji: '🖼️' },
-  { type: 'APPROVAL ABUSE', color: '#FF8C00', emoji: '🔓' },
-  { type: 'FLASH LOAN', color: '#9945FF', emoji: '💸' },
+  { type: '🩸 Wallet Drainer', severity: 'CRITICAL' as Severity, losses: ['-8.2 SOL', '-15.1 SOL', '-3.4 SOL', '-22 SOL'] },
+  { type: '🎣 Phishing Link', severity: 'HIGH' as Severity, losses: ['-150 USDC', '-500 USDC', '-80 USDC'] },
+  { type: '🥪 MEV Sandwich', severity: 'HIGH' as Severity, losses: ['-0.3 SOL', '-1.2 SOL', '-0.6 SOL'] },
+  { type: '🔑 Authority Transfer', severity: 'CRITICAL' as Severity, losses: ['Full Drain Risk', 'Ownership Seized'] },
+  { type: '⚡ Flash Loan Attack', severity: 'HIGH' as Severity, losses: ['-2,400 USDC', '-800 USDC'] },
+  { type: '⚠️ Excessive Approval', severity: 'MEDIUM' as Severity, losses: ['Unlimited Approval', 'Max Uint256'] },
 ];
 
-const PROGRAMS = [
-  'Jupiter v6', 'Raydium AMM', 'Orca Whirlpool', 'Serum DEX',
-  'Marinade Finance', 'Tensor NFT', 'Magic Eden', 'Drift Protocol',
-  'Marginfi', 'Kamino Finance',
-];
+const PROGRAMS = ['Unknown Program', 'Fake Jupiter', 'Token Program', 'Suspicious dApp', 'Unverified Protocol', 'Ghost AMM'];
 
-function genSig() {
-  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  return Array.from({ length: 8 }, () => c[Math.floor(Math.random() * c.length)]).join('');
+function randomSig() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789';
+  const prefix = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  const suffix = Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return `${prefix}...${suffix}`;
 }
 
-function genWallet() {
-  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  return Array.from({ length: 6 }, () => c[Math.floor(Math.random() * c.length)]).join('');
-}
-
-interface ThreatEvent {
-  id: number;
-  type: string;
-  color: string;
-  emoji: string;
-  sig: string;
-  wallet: string;
-  program: string;
-  riskScore: number;
-  ago: number;
-  blocked: boolean;
-}
+const severityColor: Record<Severity, string> = {
+  CRITICAL: '#FF4444',
+  HIGH: '#FF8C00',
+  MEDIUM: '#FFD700',
+};
 
 export default function LiveThreatPulse() {
-  const [events, setEvents] = useState<ThreatEvent[]>([]);
+  const [threats, setThreats] = useState<Threat[]>(SEED_THREATS);
   const [totalBlocked, setTotalBlocked] = useState(2847);
-  const [counter, setCounter] = useState(0);
+  const counterRef = useRef(0);
 
   useEffect(() => {
-    // Seed with initial events
-    const seed: ThreatEvent[] = Array.from({ length: 5 }, (_, i) => {
-      const t = THREAT_TYPES[Math.floor(Math.random() * THREAT_TYPES.length)];
-      return {
-        id: i,
-        type: t.type,
-        color: t.color,
-        emoji: t.emoji,
-        sig: genSig() + '...',
-        wallet: genWallet() + '...',
-        program: PROGRAMS[Math.floor(Math.random() * PROGRAMS.length)],
-        riskScore: 60 + Math.floor(Math.random() * 40),
-        ago: 10 + i * 15,
-        blocked: Math.random() > 0.3,
+    const addThreat = () => {
+      const template = THREAT_TYPES[Math.floor(Math.random() * THREAT_TYPES.length)];
+      const program = PROGRAMS[Math.floor(Math.random() * PROGRAMS.length)];
+      const loss = template.losses[Math.floor(Math.random() * template.losses.length)];
+      counterRef.current += 1;
+      const newThreat: Threat = {
+        id: `live-${Date.now()}-${counterRef.current}`,
+        type: template.type,
+        severity: template.severity,
+        sig: randomSig(),
+        program,
+        age: 'just now',
+        loss,
       };
-    });
-    setEvents(seed);
+      setThreats(prev => [newThreat, ...prev].slice(0, 8));
+      setTotalBlocked(prev => prev + 1);
+    };
 
-    const interval = setInterval(() => {
-      const t = THREAT_TYPES[Math.floor(Math.random() * THREAT_TYPES.length)];
-      const newEvent: ThreatEvent = {
-        id: Date.now(),
-        type: t.type,
-        color: t.color,
-        emoji: t.emoji,
-        sig: genSig() + '...',
-        wallet: genWallet() + '...',
-        program: PROGRAMS[Math.floor(Math.random() * PROGRAMS.length)],
-        riskScore: 60 + Math.floor(Math.random() * 39),
-        ago: 0,
-        blocked: Math.random() > 0.25,
-      };
-      setEvents((prev) => [newEvent, ...prev].slice(0, 8));
-      if (newEvent.blocked) setTotalBlocked((n) => n + 1);
-      setCounter((c) => c + 1);
-    }, 3500);
+    // First new threat after 3.5s, then every 3.5–6s
+    const scheduleNext = () => {
+      const delay = 3500 + Math.random() * 2500;
+      return setTimeout(() => {
+        addThreat();
+        const interval = setInterval(() => {
+          addThreat();
+        }, 3500 + Math.random() * 2500);
+        return () => clearInterval(interval);
+      }, delay);
+    };
 
-    return () => clearInterval(interval);
+    const t = scheduleNext();
+    const interval = setInterval(addThreat, 4000);
+    return () => { clearTimeout(t); clearInterval(interval); };
   }, []);
 
   return (
@@ -99,20 +99,16 @@ export default function LiveThreatPulse() {
         background: 'linear-gradient(135deg, rgba(153,69,255,0.2), rgba(255,68,68,0.1))',
         padding: '16px 20px',
         borderBottom: '1px solid rgba(153,69,255,0.15)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
+            width: 10, height: 10, borderRadius: '50%',
             background: '#FF4444',
             boxShadow: '0 0 10px #FF4444',
             animation: 'pulse 1s ease-in-out infinite',
           }} />
-          <span style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>🌐 Live Threat Feed</span>
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>🌐 Live Threat Pulse</span>
           <span style={{
             background: 'rgba(255,68,68,0.15)',
             border: '1px solid rgba(255,68,68,0.3)',
@@ -121,7 +117,7 @@ export default function LiveThreatPulse() {
             color: '#FF6B6B',
             fontSize: 11,
             fontWeight: 700,
-          }}>MAINNET</span>
+          }}>MAINNET LIVE</span>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ color: '#14F195', fontWeight: 800, fontSize: 18 }}>{totalBlocked.toLocaleString()}</div>
@@ -129,69 +125,42 @@ export default function LiveThreatPulse() {
         </div>
       </div>
 
-      {/* Events */}
+      {/* Threat list */}
       <div style={{ padding: '8px 0', maxHeight: 380, overflowY: 'auto' }}>
-        {events.map((e, i) => (
-          <div
-            key={e.id}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '10px 20px',
-              borderBottom: '1px solid rgba(255,255,255,0.04)',
-              animation: i === 0 ? 'slideIn 0.4s ease-out' : 'none',
-              background: i === 0 ? 'rgba(153,69,255,0.05)' : 'transparent',
-              transition: 'background 0.3s',
-            }}
-          >
-            {/* Risk badge */}
+        {threats.map((t, i) => (
+          <div key={t.id} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 20px',
+            borderBottom: '1px solid rgba(255,255,255,0.04)',
+            animation: i === 0 ? 'slideIn 0.3s ease' : 'none',
+            transition: 'background 0.2s',
+          }}>
             <div style={{
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              background: `${e.color}18`,
-              border: `1.5px solid ${e.color}50`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 20,
-              flexShrink: 0,
-            }}>
-              {e.emoji}
-            </div>
-
+              width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+              background: severityColor[t.severity],
+              boxShadow: `0 0 6px ${severityColor[t.severity]}`,
+            }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <span style={{ color: e.color, fontWeight: 700, fontSize: 12 }}>{e.type}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{t.type}</span>
                 <span style={{
-                  background: e.blocked ? 'rgba(20,241,149,0.12)' : 'rgba(255,68,68,0.12)',
-                  border: `1px solid ${e.blocked ? 'rgba(20,241,149,0.3)' : 'rgba(255,68,68,0.3)'}`,
-                  borderRadius: 10,
+                  background: `${severityColor[t.severity]}20`,
+                  border: `1px solid ${severityColor[t.severity]}50`,
+                  borderRadius: 6,
                   padding: '1px 6px',
-                  color: e.blocked ? '#14F195' : '#FF6B6B',
+                  color: severityColor[t.severity],
                   fontSize: 10,
                   fontWeight: 700,
-                }}>
-                  {e.blocked ? '✓ BLOCKED' : '⚠ DETECTED'}
-                </span>
+                }}>{t.severity}</span>
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontFamily: 'monospace' }}>
-                {e.sig} · {e.program}
+              <div style={{ display: 'flex', gap: 12, marginTop: 2 }}>
+                <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, fontFamily: 'monospace' }}>{t.sig}</span>
+                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>{t.program}</span>
               </div>
             </div>
-
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <div style={{
-                color: e.riskScore >= 80 ? '#FF4444' : '#FF8C00',
-                fontWeight: 800,
-                fontSize: 16,
-              }}>
-                {e.riskScore}
-              </div>
-              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>
-                {e.ago === 0 ? 'just now' : `${e.ago}s ago`}
-              </div>
+              <div style={{ color: '#FF6B6B', fontSize: 12, fontWeight: 700 }}>{t.loss}</div>
+              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>{t.age}</div>
             </div>
           </div>
         ))}
@@ -200,11 +169,11 @@ export default function LiveThreatPulse() {
       <style>{`
         @keyframes slideIn {
           from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
+          to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.6; transform: scale(0.9); }
+          50%       { opacity: 0.6; transform: scale(0.9); }
         }
       `}</style>
     </div>

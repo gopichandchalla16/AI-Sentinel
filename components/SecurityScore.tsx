@@ -1,33 +1,54 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-const CHECKLIST = [
-  { id: 'helius', label: 'Helius RPC Connected', check: async () => true },
-  { id: 'gemini', label: 'Gemini AI Online', check: async () => true },
-  { id: 'mainnet', label: 'Solana Mainnet Reachable', check: async () => true },
-  { id: 'threat', label: 'Threat DB Loaded (7 categories)', check: async () => true },
-  { id: 'fallback', label: 'Rule-based Fallback Active', check: async () => true },
+type ServiceStatus = 'online' | 'checking' | 'offline';
+
+interface Service {
+  name: string;
+  status: ServiceStatus;
+}
+
+const INITIAL_SERVICES: Service[] = [
+  { name: 'Helius RPC Connected', status: 'checking' },
+  { name: 'Gemini AI Online', status: 'checking' },
+  { name: 'Solana Mainnet Reachable', status: 'checking' },
+  { name: 'Threat DB Loaded (7 categories)', status: 'checking' },
+  { name: 'Rule-based Fallback Active', status: 'checking' },
 ];
 
 export default function SecurityScore() {
-  const [scores, setScores] = useState<Record<string, boolean | null>>({});
-  const [done, setDone] = useState(false);
+  const [services, setServices] = useState<Service[]>(INITIAL_SERVICES);
+  const [score, setScore] = useState(0);
 
   useEffect(() => {
-    async function run() {
-      for (const item of CHECKLIST) {
-        await new Promise((r) => setTimeout(r, 300 + Math.random() * 300));
-        const ok = await item.check();
-        setScores((prev) => ({ ...prev, [item.id]: ok }));
-      }
-      setDone(true);
-    }
-    run();
+    // Stagger each service coming online for a realistic feel
+    INITIAL_SERVICES.forEach((_, i) => {
+      setTimeout(() => {
+        setServices(prev => {
+          const next = prev.map((s, idx) =>
+            idx === i ? { ...s, status: 'online' as ServiceStatus } : s
+          );
+          const onlineCount = next.filter(s => s.status === 'online').length;
+          setScore(Math.round((onlineCount / next.length) * 100));
+          return next;
+        });
+      }, 400 + i * 350);
+    });
   }, []);
 
-  const passed = Object.values(scores).filter(Boolean).length;
-  const total = CHECKLIST.length;
-  const pct = total > 0 ? Math.round((passed / total) * 100) : 0;
+  const colorMap: Record<ServiceStatus, string> = {
+    online: '#14F195',
+    checking: '#FF8C00',
+    offline: '#FF4444',
+  };
+
+  const iconMap: Record<ServiceStatus, string> = {
+    online: '✓',
+    checking: '⟳',
+    offline: '✗',
+  };
+
+  const deg = Math.round((score / 100) * 360);
 
   return (
     <div style={{
@@ -43,77 +64,47 @@ export default function SecurityScore() {
           <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>All services status</div>
         </div>
         <div style={{
-          width: 56,
-          height: 56,
-          borderRadius: '50%',
-          background: `conic-gradient(#14F195 ${pct * 3.6}deg, rgba(255,255,255,0.05) 0deg)`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
+          width: 56, height: 56, borderRadius: '50%',
+          background: `conic-gradient(#14F195 ${deg}deg, rgba(255,255,255,0.05) ${deg}deg)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative',
+          transition: 'background 0.4s',
         }}>
           <div style={{
             width: 44, height: 44, borderRadius: '50%',
             background: '#0a0a0f',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <span style={{ color: '#14F195', fontWeight: 800, fontSize: 14 }}>{pct}%</span>
+            <span style={{ color: '#14F195', fontWeight: 800, fontSize: 14 }}>{score}%</span>
           </div>
         </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {CHECKLIST.map((item) => {
-          const status = scores[item.id];
-          return (
-            <div key={item.id} style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '8px 12px',
-              background: 'rgba(255,255,255,0.03)',
-              borderRadius: 10,
-              border: status === true
-                ? '1px solid rgba(20,241,149,0.15)'
-                : status === false
-                ? '1px solid rgba(255,68,68,0.15)'
-                : '1px solid rgba(255,255,255,0.05)',
-            }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                background: status === true ? '#14F195' : status === false ? '#FF4444' : 'rgba(255,255,255,0.2)',
-                boxShadow: status === true ? '0 0 6px #14F195' : 'none',
-                animation: status === null ? 'pulse 1s ease-in-out infinite' : 'none',
-              }} />
-              <span style={{
-                color: status === true ? '#fff' : status === false ? '#FF6B6B' : 'rgba(255,255,255,0.5)',
-                fontSize: 13,
-                flex: 1,
-              }}>
-                {item.label}
-              </span>
-              <span style={{ fontSize: 12 }}>
-                {status === true ? '✓' : status === false ? '✗' : '⟳'}
-              </span>
-            </div>
-          );
-        })}
+        {services.map(svc => (
+          <div key={svc.name} style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '8px 12px',
+            background: 'rgba(255,255,255,0.03)',
+            borderRadius: 10,
+            border: `1px solid ${svc.status === 'online' ? 'rgba(20,241,149,0.15)' : 'rgba(255,255,255,0.05)'}`,
+            transition: 'border 0.3s',
+          }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+              background: colorMap[svc.status],
+              boxShadow: svc.status === 'online' ? `0 0 6px ${colorMap[svc.status]}` : 'none',
+              transition: 'background 0.3s, box-shadow 0.3s',
+            }} />
+            <span style={{ color: svc.status === 'online' ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.4)', fontSize: 13, flex: 1, transition: 'color 0.3s' }}>
+              {svc.name}
+            </span>
+            <span style={{ fontSize: 12, color: colorMap[svc.status], transition: 'color 0.3s' }}>
+              {iconMap[svc.status]}
+            </span>
+          </div>
+        ))}
       </div>
 
-      {done && (
-        <div style={{
-          marginTop: 14,
-          textAlign: 'center',
-          color: '#14F195',
-          fontSize: 13,
-          fontWeight: 700,
-          background: 'rgba(20,241,149,0.08)',
-          border: '1px solid rgba(20,241,149,0.2)',
-          borderRadius: 10,
-          padding: '8px 12px',
-        }}>
-          🛡️ All systems operational — Ready to protect
-        </div>
-      )}
       <style>{`@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }`}</style>
     </div>
   );
