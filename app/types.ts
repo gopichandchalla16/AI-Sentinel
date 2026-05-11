@@ -1,4 +1,3 @@
-// Shared types for AI-Sentinel
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export interface AnalysisResult {
@@ -8,7 +7,7 @@ export interface AnalysisResult {
   redFlags: string[];
   recommendation: string;
   programsInvolved: string[];
-  transferDetails?: string;
+  transferDetails: string;
   aiModel: string;
   analysisTime: number;
 }
