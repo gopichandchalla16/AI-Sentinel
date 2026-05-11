@@ -1,7 +1,9 @@
 {
   "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 30
-    }
+    "app/api/wallet-profile/route.ts": {"maxDuration":30},
+    "app/api/threat-feed/route.ts": {"maxDuration":30},
+    "app/api/program-scan/route.ts": {"maxDuration":30},
+    "app/api/tx-chat/route.ts": {"maxDuration":30},
+    "app/api/analyze/route.ts": {"maxDuration":30}
   }
 }
