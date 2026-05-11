@@ -1,148 +1,196 @@
 import type { TransactionContext, AnalysisResult, Verdict, Recommendation, ThreatCategories } from '@/types/analysis';
-import { HIGH_RISK_PROGRAMS } from './solana';
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY || '';
 
-export function buildPrompt(ctx: TransactionContext): string {
-  return `You are a blockchain security expert specializing in Solana DeFi exploit patterns.
-Analyze the transaction data and respond ONLY with valid JSON — no markdown, no code blocks.
+const SECURITY_PROMPT = (ctx: TransactionContext): string => `You are a blockchain security expert specializing in Solana DeFi exploit patterns.
+Analyze this transaction and respond ONLY with valid JSON — no markdown, no code blocks, no extra text.
 
 Transaction Data:
-${JSON.stringify(ctx, null, 2).slice(0, 4000)}
+${JSON.stringify(ctx, null, 2)}
 
-Respond with this exact JSON structure:
+Security context:
+- Known dangerous programs found: ${ctx.knownDangerousPrograms.length > 0 ? ctx.knownDangerousPrograms.join(', ') : 'none'}
+- SetAuthority instruction: ${ctx.hasSetAuthority}
+- CloseAccount instruction: ${ctx.hasCloseAccount}
+- Max approval detected: ${ctx.hasMaxApproval}
+- Transaction status: ${ctx.status}
+- Fee paid: ${ctx.fee} SOL
+- SOL flows: ${JSON.stringify(ctx.solChanges)}
+- Token changes: ${ctx.tokenChanges.length} accounts affected
+
+Threat patterns to check:
+1. DRAINER: bulk token transfers to unknown wallets, close account patterns
+2. EXCESSIVE_APPROVAL: approve instructions with amount > 1e15 (unlimited)
+3. UNKNOWN_PROGRAM: unrecognized program IDs doing token operations
+4. FLASH_LOAN: multiple borrow/repay in same tx with price impact
+5. ACCOUNT_DRAIN: pre-balance >> post-balance for signer
+6. AUTHORITY_TRANSFER: setAuthority changing mint/freeze authority
+7. SUSPICIOUS_DATA: base58 instruction data encoding non-standard operations
+
+Risk scoring:
+- 0-25: SAFE — standard SPL/system ops, known DEX swaps, small amounts
+- 26-50: CAUTION — unknown programs, moderate amounts, unusual patterns
+- 51-75: HIGH_RISK — dangerous flags present, large amounts, suspicious approvals
+- 76-100: CRITICAL — drainer patterns, known malicious programs, authority theft
+
+Respond with EXACTLY this JSON structure:
 {
-  "riskScore": <number 0-100>,
-  "verdict": "SAFE" | "CAUTION" | "HIGH_RISK" | "CRITICAL",
-  "summary": "<plain English 2-3 sentence description of what this transaction does>",
-  "redFlags": ["<flag1>", "<flag2>"],
-  "recommendation": "SAFE_TO_PROCEED" | "PROCEED_WITH_CAUTION" | "DO_NOT_SIGN",
+  "riskScore": <integer 0-100>,
+  "verdict": "<SAFE|CAUTION|HIGH_RISK|CRITICAL>",
+  "summary": "<plain English 2-3 sentence description any user can understand>",
+  "redFlags": ["<specific threat found>"],
+  "recommendation": "<SAFE_TO_PROCEED|PROCEED_WITH_CAUTION|DO_NOT_SIGN>",
   "threatCategories": {
-    "drainerPattern": <boolean>,
-    "excessiveApprovals": <boolean>,
-    "unknownProgram": <boolean>,
-    "flashLoanVector": <boolean>,
-    "accountDrain": <boolean>,
-    "authorityTransfer": <boolean>,
-    "suspiciousData": <boolean>
+    "drainerPattern": <true|false>,
+    "excessiveApprovals": <true|false>,
+    "unknownProgram": <true|false>,
+    "flashLoanVector": <true|false>,
+    "accountDrain": <true|false>,
+    "authorityTransfer": <true|false>,
+    "suspiciousData": <true|false>
   },
-  "affectedAssets": ["<asset1>"],
-  "estimatedLoss": "<e.g. Up to 5.2 SOL at risk>",
-  "programsInvolved": ["<program name>"],
-  "transferDetails": "<what assets moved>"
-}
+  "affectedAssets": ["<asset description>"],
+  "estimatedLoss": "<e.g. Up to 5.2 SOL at risk or No assets at risk>"
+}`;
 
-Risk scoring guide:
-0-25: SAFE — Standard ops (System, SPL Token, Jupiter, known DEX)
-26-50: CAUTION — Unknown programs, moderate token changes, DEX swaps
-51-75: HIGH_RISK — Unusual approvals, large SOL drain, multiple unknowns
-76-100: CRITICAL — Drainer patterns, setAuthority abuse, known exploits, bulk drains`;
-}
-
-export async function callGeminiApi(prompt: string): Promise<string> {
-  if (!GEMINI_KEY) throw new Error('GEMINI_API_KEY not set');
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 1200, topP: 0.9 },
-      }),
-      signal: AbortSignal.timeout(25000),
-    }
-  );
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`Gemini API error ${res.status}: ${t.slice(0, 200)}`);
-  }
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-}
-
-function ruleBasedFallback(ctx: TransactionContext): AnalysisResult {
-  let score = 10;
-  const flags: string[] = [];
+function ruleBasedAnalysis(ctx: TransactionContext): AnalysisResult {
+  let riskScore = 0;
+  const redFlags: string[] = [];
   const threats: ThreatCategories = {
     drainerPattern: false, excessiveApprovals: false, unknownProgram: false,
     flashLoanVector: false, accountDrain: false, authorityTransfer: false, suspiciousData: false,
   };
 
-  if (ctx.hasHighRiskProgram) { score = Math.max(score, 92); threats.drainerPattern = true; flags.push('⛔ Known high-risk/drainer program detected'); }
-  if (ctx.hasSetAuthority)    { score = Math.max(score, 72); threats.authorityTransfer = true; flags.push('⚠️ setAuthority instruction detected — authority transfer'); }
-  if (ctx.hasCloseAccount)    { score = Math.max(score, 58); threats.accountDrain = true; flags.push('⚠️ closeAccount instruction — account being closed'); }
-  if (ctx.maxSolDrain > 10)   { score = Math.max(score, 80); threats.accountDrain = true; flags.push(`🚨 Large SOL drain: ${ctx.maxSolDrain.toFixed(3)} SOL leaving an account`); }
-  else if (ctx.maxSolDrain > 2) { score = Math.max(score, 45); flags.push(`⚠️ Moderate SOL movement: ${ctx.maxSolDrain.toFixed(3)} SOL`); }
+  if (ctx.knownDangerousPrograms.length > 0) {
+    riskScore += 60;
+    threats.drainerPattern = true;
+    redFlags.push(`Known dangerous program: ${ctx.knownDangerousPrograms.join(', ')}`);
+  }
+  if (ctx.hasMaxApproval) {
+    riskScore += 35;
+    threats.excessiveApprovals = true;
+    redFlags.push('Unlimited token approval detected — wallet could be drained at any time');
+  }
+  if (ctx.hasSetAuthority) {
+    riskScore += 25;
+    threats.authorityTransfer = true;
+    redFlags.push('Authority transfer instruction — control of a token account may change');
+  }
+  if (ctx.hasCloseAccount) {
+    riskScore += 15;
+    threats.accountDrain = true;
+    redFlags.push('Account close instruction — tokens may be swept from a token account');
+  }
+  const maxDrain = Math.max(...ctx.solChanges.map(s => -s.change), 0);
+  if (maxDrain > 5) {
+    riskScore += 20;
+    threats.accountDrain = true;
+    redFlags.push(`Large SOL movement: ${maxDrain.toFixed(2)} SOL leaving an account`);
+  }
+  const hasUnknown = ctx.programIds.some(p => p.startsWith('Unknown('));
+  if (hasUnknown) {
+    riskScore += 15;
+    threats.unknownProgram = true;
+    redFlags.push('Unverified program ID — smart contract with no public audit');
+  }
+  if (ctx.status === 'failed') riskScore = Math.max(riskScore, 10);
 
-  const unknownPrograms = ctx.programIds.filter(p => !HIGH_RISK_PROGRAMS.has(p) && !(ctx.programLabels.some(l => !l.startsWith('Unknown'))));
-  if (unknownPrograms.length > 0) { score = Math.max(score, 40); threats.unknownProgram = true; flags.push(`⚠️ ${unknownPrograms.length} unrecognized program(s) involved`); }
-  if (ctx.tokenChanges.length > 5) { score = Math.max(score, 55); threats.excessiveApprovals = true; flags.push('⚠️ Excessive token account changes (potential bulk drain)'); }
-  if (ctx.innerInstructionCount > 10) { score = Math.max(score, 50); threats.flashLoanVector = true; flags.push('⚠️ High inner instruction count — possible flash loan pattern'); }
-  if (ctx.status === 'failed') { flags.push('ℹ️ Transaction failed on-chain'); }
+  riskScore = Math.min(100, riskScore);
 
-  let verdict: Verdict = 'SAFE';
-  let rec: Recommendation = 'SAFE_TO_PROCEED';
-  if (score >= 76) { verdict = 'CRITICAL'; rec = 'DO_NOT_SIGN'; }
-  else if (score >= 51) { verdict = 'HIGH_RISK'; rec = 'DO_NOT_SIGN'; }
-  else if (score >= 26) { verdict = 'CAUTION'; rec = 'PROCEED_WITH_CAUTION'; }
+  const verdict: Verdict = riskScore >= 76 ? 'CRITICAL' : riskScore >= 51 ? 'HIGH_RISK' : riskScore >= 26 ? 'CAUTION' : 'SAFE';
+  const recommendation: Recommendation = riskScore >= 51 ? 'DO_NOT_SIGN' : riskScore >= 26 ? 'PROCEED_WITH_CAUTION' : 'SAFE_TO_PROCEED';
+
+  const summarySol = ctx.solChanges.length > 0 ? `${Math.abs(ctx.solChanges[0].change).toFixed(4)} SOL` : 'no SOL';
 
   return {
-    riskScore: score,
+    riskScore,
     verdict,
-    summary: `This transaction involves ${ctx.programLabels.slice(0, 3).join(', ')}. ${ctx.tokenChanges.length} token account(s) affected. ${ctx.maxSolDrain > 0 ? `Up to ${ctx.maxSolDrain.toFixed(3)} SOL moved.` : ''} (Rule-based analysis — Gemini unavailable)`,
-    redFlags: flags.length > 0 ? flags : ['No significant threats detected by rule engine'],
-    recommendation: rec,
+    summary: redFlags.length > 0
+      ? `This transaction triggers ${redFlags.length} security warning(s). It involves ${ctx.programIds.slice(0, 2).join(', ')} and moves ${summarySol}. ${verdict === 'CRITICAL' || verdict === 'HIGH_RISK' ? 'This pattern is commonly associated with wallet draining attacks.' : 'Review carefully before signing.'}`
+      : `This appears to be a standard Solana transaction involving ${ctx.programIds.slice(0, 2).join(', ')}. It moves ${summarySol} across ${ctx.accountKeys.length} accounts. No obvious threat patterns detected.`,
+    redFlags: redFlags.length > 0 ? redFlags : ['No threats detected by rule engine'],
+    recommendation,
     threatCategories: threats,
-    affectedAssets: ctx.tokenChanges.map(t => t.mint).filter(Boolean).slice(0, 5),
-    estimatedLoss: ctx.maxSolDrain > 0 ? `Up to ${ctx.maxSolDrain.toFixed(3)} SOL at risk` : 'No significant loss estimated',
-    aiModel: 'Rule-based fallback (Gemini unavailable)',
+    affectedAssets: ctx.tokenChanges.length > 0 ? ctx.tokenChanges.map(t => `Token ${t.mint.slice(0, 8)}... (${t.preAmount} → ${t.postAmount})`) : ['SOL only'],
+    estimatedLoss: maxDrain > 0 ? `Up to ${maxDrain.toFixed(4)} SOL at risk` : 'No significant assets at risk',
+    programsInvolved: ctx.programIds,
     analysisTime: 0,
-    programsInvolved: ctx.programLabels,
-    transferDetails: ctx.solChanges.filter(s => Math.abs(s.change) > 0.001).map(s => `${s.account}: ${s.change > 0 ? '+' : ''}${s.change.toFixed(4)} SOL`).join('; ') || 'No significant SOL movement',
-    rpcNote: 'Gemini API unavailable — rule-based analysis used',
+    aiModel: 'Rule-Based Fallback',
+    rpcSource: 'Helius RPC',
   };
 }
 
 export async function analyzeTransaction(ctx: TransactionContext): Promise<AnalysisResult> {
   const start = Date.now();
-  try {
-    const prompt = buildPrompt(ctx);
-    const raw = await callGeminiApi(prompt);
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('Gemini returned non-JSON response');
-    const parsed = JSON.parse(jsonMatch[0]);
 
-    // Validate & normalise
-    const validVerdicts: Verdict[] = ['SAFE', 'CAUTION', 'HIGH_RISK', 'CRITICAL'];
-    const validRecs: Recommendation[] = ['SAFE_TO_PROCEED', 'PROCEED_WITH_CAUTION', 'DO_NOT_SIGN'];
-    if (!validVerdicts.includes(parsed.verdict)) parsed.verdict = 'CAUTION';
-    if (!validRecs.includes(parsed.recommendation)) parsed.recommendation = 'PROCEED_WITH_CAUTION';
-    if (typeof parsed.riskScore !== 'number') parsed.riskScore = 50;
-    if (!Array.isArray(parsed.redFlags)) parsed.redFlags = [];
-    if (!Array.isArray(parsed.affectedAssets)) parsed.affectedAssets = [];
-    if (!parsed.threatCategories) parsed.threatCategories = { drainerPattern:false, excessiveApprovals:false, unknownProgram:false, flashLoanVector:false, accountDrain:false, authorityTransfer:false, suspiciousData:false };
-
-    // Force CRITICAL if known drainer
-    if (ctx.hasHighRiskProgram) {
-      parsed.verdict = 'CRITICAL';
-      parsed.riskScore = Math.max(parsed.riskScore, 95);
-      parsed.recommendation = 'DO_NOT_SIGN';
-      parsed.threatCategories.drainerPattern = true;
-      if (!parsed.redFlags.some((f: string) => f.includes('drainer'))) {
-        parsed.redFlags.unshift('⛔ Known drainer/high-risk program detected in this transaction');
-      }
-    }
-
-    parsed.aiModel = 'Gemini 1.5 Flash';
-    parsed.analysisTime = Date.now() - start;
-    parsed.programsInvolved = parsed.programsInvolved || ctx.programLabels;
-    parsed.transferDetails = parsed.transferDetails || 'See summary';
-    return parsed as AnalysisResult;
-  } catch (err) {
-    console.warn('[AI-Sentinel] Gemini failed, using rule-based fallback:', err);
-    const result = ruleBasedFallback(ctx);
+  if (!GEMINI_KEY) {
+    console.warn('[AI-Sentinel] GEMINI_API_KEY not set, using rule-based analysis');
+    const result = ruleBasedAnalysis(ctx);
     result.analysisTime = Date.now() - start;
     return result;
+  }
+
+  try {
+    const prompt = SECURITY_PROMPT(ctx);
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 1500, topP: 0.9 },
+        }),
+        signal: AbortSignal.timeout(25000),
+      }
+    );
+
+    if (!res.ok) throw new Error(`Gemini API error: ${res.status}`);
+    const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+
+    // Strip markdown fences
+    const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON found in Gemini response');
+
+    const parsed = JSON.parse(match[0]) as Partial<AnalysisResult>;
+
+    // Validate and fill missing fields
+    const validVerdicts: Verdict[] = ['SAFE', 'CAUTION', 'HIGH_RISK', 'CRITICAL'];
+    const verdict: Verdict = validVerdicts.includes(parsed.verdict as Verdict) ? parsed.verdict as Verdict : 'CAUTION';
+    const validRecs: Recommendation[] = ['SAFE_TO_PROCEED', 'PROCEED_WITH_CAUTION', 'DO_NOT_SIGN'];
+    const recommendation: Recommendation = validRecs.includes(parsed.recommendation as Recommendation) ? parsed.recommendation as Recommendation : 'PROCEED_WITH_CAUTION';
+
+    // Override if known dangerous program — always CRITICAL
+    const finalVerdict: Verdict = ctx.knownDangerousPrograms.length > 0 ? 'CRITICAL' : verdict;
+    const finalScore = ctx.knownDangerousPrograms.length > 0 ? Math.max((parsed.riskScore ?? 0), 90) : Math.min(100, Math.max(0, parsed.riskScore ?? 50));
+    const finalRec: Recommendation = ctx.knownDangerousPrograms.length > 0 ? 'DO_NOT_SIGN' : recommendation;
+
+    const defaultThreats: ThreatCategories = {
+      drainerPattern: false, excessiveApprovals: false, unknownProgram: false,
+      flashLoanVector: false, accountDrain: false, authorityTransfer: false, suspiciousData: false,
+    };
+
+    return {
+      riskScore: finalScore,
+      verdict: finalVerdict,
+      summary: parsed.summary ?? 'Analysis complete.',
+      redFlags: Array.isArray(parsed.redFlags) && parsed.redFlags.length > 0 ? parsed.redFlags : ['No specific threats flagged'],
+      recommendation: finalRec,
+      threatCategories: { ...defaultThreats, ...(parsed.threatCategories ?? {}) },
+      affectedAssets: Array.isArray(parsed.affectedAssets) ? parsed.affectedAssets : [],
+      estimatedLoss: parsed.estimatedLoss ?? 'Unknown',
+      programsInvolved: ctx.programIds,
+      analysisTime: Date.now() - start,
+      aiModel: 'Gemini 1.5 Flash',
+      rpcSource: 'Helius RPC',
+    };
+  } catch (err) {
+    console.error('[AI-Sentinel] Gemini failed, falling back to rule-based:', err);
+    const fallback = ruleBasedAnalysis(ctx);
+    fallback.analysisTime = Date.now() - start;
+    fallback.aiModel = 'Rule-Based Fallback (Gemini unavailable)';
+    return fallback;
   }
 }

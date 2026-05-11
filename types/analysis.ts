@@ -20,11 +20,10 @@ export interface AnalysisResult {
   threatCategories: ThreatCategories;
   affectedAssets: string[];
   estimatedLoss: string;
-  aiModel: string;
-  analysisTime: number;
   programsInvolved: string[];
-  transferDetails: string;
-  rpcNote?: string;
+  analysisTime: number;
+  aiModel: string;
+  rpcSource: string;
 }
 
 export interface HistoryItem {
@@ -35,27 +34,30 @@ export interface HistoryItem {
   summary: string;
 }
 
+export interface TokenBalanceChange {
+  accountIndex: number;
+  mint: string;
+  owner: string;
+  preAmount: string;
+  postAmount: string;
+  decimals: number;
+}
+
 export interface TransactionContext {
   signature: string;
   blockTime: number | null;
+  slot: number;
   fee: number;
   status: 'success' | 'failed';
   accountKeys: string[];
   programIds: string[];
-  programLabels: string[];
   solChanges: { account: string; change: number }[];
-  tokenChanges: {
-    account: string;
-    mint: string;
-    uiAmountBefore: number | null;
-    uiAmountAfter: number | null;
-  }[];
+  tokenChanges: TokenBalanceChange[];
   instructionCount: number;
   innerInstructionCount: number;
   logMessages: string[];
+  knownDangerousPrograms: string[];
   hasSetAuthority: boolean;
   hasCloseAccount: boolean;
-  hasHighRiskProgram: boolean;
-  highRiskProgramNames: string[];
-  maxSolDrain: number;
+  hasMaxApproval: boolean;
 }
