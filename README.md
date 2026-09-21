@@ -1,3 +1,34 @@
+<div align="center">
+
+# 🛡️ AI-Sentinel
+
+### AI-Powered Solana Transaction Security
+
+**A practical AI × Web3 security project built for the Colosseum Frontier Hackathon 2026.**
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Open-9945FF?style=for-the-badge)](https://ai-sentinel-three.vercel.app)
+[![Source](https://img.shields.io/badge/Source-GitHub-181717?style=for-the-badge&logo=github)](https://github.com/gopichandchalla16/AI-Sentinel)
+[![Solana](https://img.shields.io/badge/Solana-Security-14F195?style=for-the-badge&logo=solana&logoColor=black)](https://solana.com)
+[![AI](https://img.shields.io/badge/AI-Gemini-4285F4?style=for-the-badge)](https://ai.google.dev/)
+
+</div>
+
+## 👀 Recruiter Snapshot
+
+**Problem:** Solana users often cannot understand what a transaction or program is asking them to sign.
+
+**What I built:** An AI-assisted security layer that analyzes transactions, wallets and programs and turns on-chain activity into understandable risk signals.
+
+**My role:** Lead Engineer, AI + Solana.
+
+**Engineering signal:** Real-time blockchain data + LLM analysis + security-oriented product design + deployed application.
+
+### Core Engineering Skills Demonstrated
+
+`Solana` · `TypeScript` · `Next.js` · `Gemini` · `Helius` · `REST APIs` · `Vercel` · `Web3 Security`
+
+---
+
 # 🛡️ AI-Sentinel — Solana's First Agentic Transaction Firewall
 
 > **Colosseum Frontier Hackathon 2026** — Deadline: May 11, 2026
